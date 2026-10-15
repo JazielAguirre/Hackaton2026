@@ -59,6 +59,7 @@ Configuración inicial: `umbral_confianza` 0.60, `min_frutos_muestra` 30, `alert
 - El LLM es opcional: solo reescribe el texto de una ficha en lenguaje amigable y siempre agrega "confirma con un técnico agrícola".
 
 ## Reglas del hackatón que afectan cómo trabajas
+- Responde siempre en español: explicaciones, preguntas y resúmenes al terminar cada tarea.
 - Todo el código se escribe durante el evento. Cita en README.md los datasets, modelos y librerías usados.
 - El equipo debe entender y defender todo el código: prefiere soluciones simples y legibles, comenta solo lo que no es obvio y al terminar cada tarea explica en pocas líneas las decisiones importantes.
 - `AI_LOG.md`: después de cada tarea agrega una fila con fecha y hora, qué se pidió, qué generaste y qué archivos tocaste. Deja vacía la columna "Qué cambió el equipo" para que la llene una persona.
