@@ -30,6 +30,10 @@ def catalogos() -> dict[str, list[dict]]:
             {"id": "fresa", "nombre": "Fresa", "activa": True},
             {"id": "pina", "nombre": "Piña", "activa": False},
         ],
+        "clases": [
+            {"id": 1, "fruta_id": "mango", "codigo": "sano", "nombre": "Sano"},
+            {"id": 2, "fruta_id": "mango", "codigo": "antracnosis", "nombre": "Antracnosis"},
+        ],
         "zonas": [
             {"id": 1, "nombre": "Valle", "activa": True},
             {"id": 2, "nombre": "Sierra", "activa": False},
@@ -39,6 +43,13 @@ def catalogos() -> dict[str, list[dict]]:
             {"id": OTRO_USUARIO_ID, "zona_id": 1, "rol": "productor"},
         ],
     }
+
+
+def agregar(bd: FakeSupabase, tabla: str, **campos) -> dict:
+    """Mete una fila directo en la base falsa (sin pasar por RLS) y la devuelve."""
+    fila = bd.completar(tabla, campos)
+    bd.tablas.setdefault(tabla, []).append(fila)
+    return fila
 
 
 @pytest.fixture

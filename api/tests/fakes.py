@@ -64,13 +64,21 @@ class FakeSupabase:
         ahora = datetime.now(timezone.utc).isoformat()
         fila.setdefault("id", str(uuid4()))
         fila.setdefault("created_at", ahora)
-        if tabla == "lotes":
-            fila.setdefault("usuario_id", self.usuario_id)
-            fila.setdefault("estado", "borrador")
-            fila.setdefault("updated_at", ahora)
-        if tabla == "fotos":
-            for campo, valor in {"valida": True, "motivo_rechazo": None, "nitidez": None, "brillo": None}.items():
-                fila.setdefault(campo, valor)
+        # Como en la base real, select("*") trae todas las columnas (null si no hay valor).
+        defaults: dict[str, dict[str, Any]] = {
+            "lotes": {
+                "usuario_id": self.usuario_id, "estado": "borrador", "updated_at": ahora,
+                "fruta_principal": None, "parcela": None, "zona_id": None, "latitud": None,
+                "longitud": None, "fecha_cosecha": None, "destino_buscado": None,
+            },
+            "fotos": {
+                "ancho": None, "alto": None, "valida": True, "motivo_rechazo": None,
+                "nitidez": None, "brillo": None,
+            },
+            "sugerencias": {"ficha_id": None},
+        }
+        for campo, valor in defaults.get(tabla, {}).items():
+            fila.setdefault(campo, valor)
         return fila
 
 

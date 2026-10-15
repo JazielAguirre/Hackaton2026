@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
-from tests.conftest import USUARIO
+from tests.conftest import OTRO_USUARIO_ID, USUARIO, agregar
 
 LOTE_MINIMO = {"nombre": "Lote norte"}
 
@@ -81,3 +81,78 @@ def test_no_permite_elegir_dueno_ni_estado(cliente):
 def test_sin_sesion_responde_401():
     app.dependency_overrides.clear()
     assert TestClient(app).post("/lotes", json=LOTE_MINIMO).status_code == 401
+
+
+# ---------- GET /lotes/{id} ----------
+
+def _analisis(bd, lote_id, creado: str, grado: str) -> dict:
+    return agregar(
+        bd, "analisis_lote", lote_id=lote_id, created_at=creado, total_frutos=10, frutos_sanos=9,
+        frutos_separar=0, frutos_revision=1, pct_sanos=90.0, pct_separar=0.0,
+        conteo_por_clase={"mango": {"sano": 9, "antracnosis": 1}}, grado=grado,
+        destino_lote="mercado_nacional", muestra_pequena=True, modelo_version="prueba-1",
+    )
+
+
+def _fruto(bd, lote_id, foto_id, clase_id) -> dict:
+    return agregar(
+        bd, "frutos", lote_id=lote_id, foto_id=foto_id, fruta_id="mango", conf_deteccion=0.9,
+        caja_x=0.1, caja_y=0.2, caja_ancho=0.3, caja_alto=0.4, clase_id=clase_id,
+        conf_clasificacion=0.8 if clase_id else None,
+        destino="exportacion" if clase_id else "revision_manual", requiere_revision=clase_id is None,
+    )
+
+
+def test_detalle_de_lote_sin_analisis(cliente, bd):
+    lote = agregar(bd, "lotes", nombre="Lote nuevo", usuario_id=str(USUARIO.id), zona_id=1)
+
+    respuesta = cliente.get(f"/lotes/{lote['id']}")
+
+    assert respuesta.status_code == 200
+    detalle = respuesta.json()
+    assert detalle["nombre"] == "Lote nuevo"
+    assert detalle["zona_nombre"] == "Valle"
+    assert detalle["analisis"] is None
+    assert detalle["fotos"] == detalle["frutos"] == detalle["sugerencias"] == []
+
+
+def test_detalle_trae_fotos_con_url_firmada(cliente, bd):
+    lote = agregar(bd, "lotes", nombre="Lote", usuario_id=str(USUARIO.id))
+    ruta = f"{USUARIO.id}/{lote['id']}/foto.jpg"
+    agregar(bd, "fotos", lote_id=lote["id"], storage_path=ruta, ancho=640, alto=480)
+    agregar(bd, "fotos", lote_id=lote["id"], storage_path=f"{USUARIO.id}/{lote['id']}/perdida.jpg")
+    bd.storage.objetos[ruta] = (b"jpg", {})
+
+    fotos = cliente.get(f"/lotes/{lote['id']}").json()["fotos"]
+
+    assert fotos[0]["url"].startswith(f"https://storage.test/{ruta}")
+    assert fotos[0]["url_marcada"] is None
+    assert fotos[1]["url"] is None  # el archivo no existe en Storage
+
+
+def test_detalle_usa_el_analisis_mas_reciente(cliente, bd):
+    lote = agregar(bd, "lotes", nombre="Lote", usuario_id=str(USUARIO.id), estado="analizado")
+    foto = agregar(bd, "fotos", lote_id=lote["id"], storage_path="x.jpg")
+    viejo = _analisis(bd, lote["id"], "2026-10-14T10:00:00+00:00", "C")
+    nuevo = _analisis(bd, lote["id"], "2026-10-15T10:00:00+00:00", "B")
+    agregar(bd, "sugerencias", lote_id=lote["id"], analisis_id=viejo["id"], texto="vieja", origen="plantilla")
+    agregar(bd, "sugerencias", lote_id=lote["id"], analisis_id=nuevo["id"], texto="nueva", origen="plantilla")
+    _fruto(bd, lote["id"], foto["id"], clase_id=1)
+    _fruto(bd, lote["id"], foto["id"], clase_id=None)
+
+    detalle = cliente.get(f"/lotes/{lote['id']}").json()
+
+    assert detalle["analisis"]["id"] == nuevo["id"]
+    assert detalle["analisis"]["grado"] == "B"
+    assert [s["texto"] for s in detalle["sugerencias"]] == ["nueva"]
+    assert detalle["frutos"][0]["clase"] == {"codigo": "sano", "nombre": "Sano"}
+    assert detalle["frutos"][1]["clase"] is None
+    assert detalle["frutos"][1]["destino"] == "revision_manual"
+
+
+def test_detalle_de_lote_ajeno_o_inexistente_responde_404(cliente, bd):
+    ajeno = agregar(bd, "lotes", nombre="Ajeno", usuario_id=OTRO_USUARIO_ID)
+    for lote_id in (ajeno["id"], "33333333-3333-3333-3333-333333333333"):
+        respuesta = cliente.get(f"/lotes/{lote_id}")
+        assert respuesta.status_code == 404
+        assert respuesta.json()["detail"] == "Lote no encontrado"

@@ -32,6 +32,7 @@ La web inicia sesión con Supabase Auth y manda su `access_token` en cada petici
 | `GET /yo` | Usuario del token; sirve para comprobar la sesión. |
 | `POST /lotes` | Crea un lote del usuario (`nombre` obligatorio). Si no manda `zona_id`, usa la de su perfil. Fruta fuera de mango, jitomate o fresa → 422. |
 | `POST /lotes/{id}/fotos` | Sube hasta 20 fotos (multipart, campo `fotos`, 10 MB cada una). Las guarda como JPEG enderezado, sin EXIF y con lado mayor de 1600 px. Si una falla, no se guarda ninguna. |
+| `GET /lotes/{id}` | Lote con nombre de zona, fotos (URL firmada que vence en 1 hora), análisis más reciente, frutos con su clase y sugerencias. Sin análisis: `analisis` es `null` y las listas van vacías. Lote ajeno → 404. |
 
 ## Variables de entorno
 | Variable | Uso |
