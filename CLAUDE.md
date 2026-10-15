@@ -14,7 +14,7 @@ Flujo: foto → detector YOLO (ubica cada fruto y su tipo) → recorte → clasi
 
 | Carpeta | Contenido |
 | --- | --- |
-| `web/` | React + Vite (PWA). Cámara con `<input type="file" accept="image/*" capture="environment" multiple>`. supabase-js con anon key. |
+| `frontend/` | React + Vite (PWA). Cámara con `<input type="file" accept="image/*" capture="environment" multiple>`. supabase-js con anon key. |
 | `api/` | FastAPI. Corre detector y clasificadores, genera imagen marcada y PDF. Usa la service role key. |
 | `ml/` | Scripts y notebooks de entrenamiento. `ml/data/` no se sube a git. |
 | `supabase/migrations/` | Copia SQL de cada migración aplicada. |
@@ -22,7 +22,7 @@ Flujo: foto → detector YOLO (ubica cada fruto y su tipo) → recorte → clasi
 Rutas de la API: `POST /lotes`, `POST /lotes/{id}/fotos`, `POST /lotes/{id}/analizar`, `GET /lotes/{id}`, `GET /lotes/{id}/reporte.pdf`, `GET /bitacora`.
 
 ## Comandos (actualizar cuando existan)
-- Web: `cd web && npm install && npm run dev`
+- Web: `cd frontend && npm install && npm run dev`
 - API: `cd api && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload`
 
 ## Base de datos (Supabase, PostgreSQL)
@@ -31,9 +31,10 @@ Rutas de la API: `POST /lotes`, `POST /lotes/{id}/fotos`, `POST /lotes/{id}/anal
 - Cambios de esquema SOLO con migraciones del MCP (`apply_migration`), con copia en `supabase/migrations/<timestamp>_<descripcion>.sql`. Muestra el SQL y espera confirmación antes de aplicar. Nunca borres tablas ni datos sin permiso explícito.
 - RLS en todas las tablas. Toda tabla o función nueva lleva sus políticas y permisos en la misma migración. En funciones, revoca EXECUTE de `public` y `anon`.
 - Nombres en español, snake_case, sin acentos ni ñ.
-- Después de cambiar el esquema, regenera `web/src/types/database.ts`.
+- Después de cambiar el esquema, regenera `frontend/src/types/database.ts`.
 - Tablas: `frutas`, `clases`, `umbrales_grado`, `configuracion`, `fichas`, `zonas`, `perfiles`, `lotes`, `fotos`, `frutos`, `analisis_lote`, `sugerencias`. Vista `bitacora_lotes`. Funciones `cerrar_analisis_lote()` (solo service role) y `alertas_comunitarias()` (agrupa por `zona_id` y devuelve `zona_nombre`). Bucket privado `fotos-lotes` con ruta `{usuario_id}/{lote_id}/{foto_id}.jpg`. Los lotes usan `zona_id` de la tabla `zonas`, no texto libre.
 - Login con Supabase Auth (correo y contraseña). Al registrarse, el trigger `crear_perfil_usuario()` crea el perfil con `nombre_completo`, `organizacion` y `zona_id` tomados de `options.data` en `signUp`. El rol nunca sale de la metadata y solo lo cambia la service role. El perfil se edita con `.update()`, no con `upsert`.
+
 ## Dominio (no cambiar sin acuerdo del equipo)
 Clases por fruta (código → destino por defecto):
 - mango: `sano` → exportacion · `antracnosis` → separar · `pudricion_pedunculo` → separar · `otro_defecto` → mercado_nacional
@@ -65,7 +66,7 @@ Configuración inicial: `umbral_confianza` 0.60, `min_frutos_muestra` 30, `alert
 - Commits pequeños y frecuentes, con mensajes en español en imperativo (ej. "Agrega trigger de destino"). No hagas push si no te lo piden.
 
 ## Seguridad
-- Nunca escribas llaves en el código ni las subas al repo. Variables: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en web; `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en api. Mantén `.env.example` al día y `.env` en `.gitignore`.
+- Nunca escribas llaves en el código ni las subas al repo. Variables: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en frontend; `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en api. Mantén `.env.example` al día y `.env` en `.gitignore`.
 - La service role key solo existe en `api/`.
 
 ## Estilo
