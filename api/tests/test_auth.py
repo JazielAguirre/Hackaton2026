@@ -14,32 +14,33 @@ USUARIO_ID = "11111111-1111-1111-1111-111111111111"
 
 
 @pytest.fixture
-def cliente():
+def cliente_auth():
+    """Valida tokens de verdad (con un Supabase Auth falso), sin saltarse usuario_actual."""
     usuario = SimpleNamespace(id=USUARIO_ID, email="productor@ejemplo.com")
     app.dependency_overrides[cliente_anon] = lambda: FakeAnon({"token-valido": usuario})
     yield TestClient(app)
     app.dependency_overrides.clear()
 
 
-def test_sin_token_responde_401(cliente):
-    respuesta = cliente.get("/yo")
+def test_sin_token_responde_401(cliente_auth):
+    respuesta = cliente_auth.get("/yo")
     assert respuesta.status_code == 401
     assert respuesta.json()["detail"] == "Inicia sesión para continuar"
 
 
-def test_esquema_distinto_de_bearer_responde_401(cliente):
-    respuesta = cliente.get("/yo", headers={"Authorization": "Basic abc"})
+def test_esquema_distinto_de_bearer_responde_401(cliente_auth):
+    respuesta = cliente_auth.get("/yo", headers={"Authorization": "Basic abc"})
     assert respuesta.status_code == 401
 
 
-def test_token_rechazado_por_supabase_responde_401(cliente):
-    respuesta = cliente.get("/yo", headers={"Authorization": "Bearer token-falso"})
+def test_token_rechazado_por_supabase_responde_401(cliente_auth):
+    respuesta = cliente_auth.get("/yo", headers={"Authorization": "Bearer token-falso"})
     assert respuesta.status_code == 401
     assert "vuelve a iniciar sesión" in respuesta.json()["detail"]
 
 
-def test_token_valido_devuelve_al_usuario(cliente):
-    respuesta = cliente.get("/yo", headers={"Authorization": "Bearer token-valido"})
+def test_token_valido_devuelve_al_usuario(cliente_auth):
+    respuesta = cliente_auth.get("/yo", headers={"Authorization": "Bearer token-valido"})
     assert respuesta.status_code == 200
     assert respuesta.json() == {"id": USUARIO_ID, "email": "productor@ejemplo.com"}
 

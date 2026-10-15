@@ -30,6 +30,7 @@ La web inicia sesión con Supabase Auth y manda su `access_token` en cada petici
 | --- | --- |
 | `GET /health` | Estado de la API (sin sesión). |
 | `GET /yo` | Usuario del token; sirve para comprobar la sesión. |
+| `POST /lotes` | Crea un lote del usuario (`nombre` obligatorio). Si no manda `zona_id`, usa la de su perfil. Fruta fuera de mango, jitomate o fresa → 422. |
 
 ## Variables de entorno
 | Variable | Uso |
