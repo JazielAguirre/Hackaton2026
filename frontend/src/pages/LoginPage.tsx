@@ -21,6 +21,7 @@ const MODES = [
   { value: 'registro', label: 'Crear cuenta' },
 ] as const
 
+const MAX_NOMBRE = 20
 const MIN_CONTRASENA = 8
 const CORREO_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -110,6 +111,8 @@ export function LoginPage({ onSubmit }: LoginPageProps) {
               name="nombre"
               autoComplete="name"
               placeholder="Tu nombre"
+              maxLength={MAX_NOMBRE}
+              hint={`Máximo ${MAX_NOMBRE} caracteres · ${values.nombre.length}/${MAX_NOMBRE}`}
               value={values.nombre}
               onChange={(e) => update('nombre', e.target.value)}
               onBlur={() => markTouched('nombre')}

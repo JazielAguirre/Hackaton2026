@@ -4,23 +4,53 @@
    ========================================================================== */
 
 :root {
-  /* Color */
-  --color-bg: #f5f5f7;
-  --color-text: #1d1d1f;
-  --color-text-secondary: #6e6e73;
+  /* Paleta del equipo */
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-300: #5eead4;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-900: #134e4a;
+
+  --color-accent-50: #fff1ee;
+  --color-accent-500: #f97360;
+  --color-accent-600: #e85d4a;
+
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-700: #334155;
+  --color-gray-900: #0f172a;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #2563eb;
+
+  --font-sans: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  /* Roles: los componentes usan estos nombres, no los de la paleta */
+  --color-bg: var(--color-gray-50);
+  --color-text: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-500);
   --color-surface: rgba(255, 255, 255, 0.72);
   --color-surface-edge: rgba(255, 255, 255, 0.6);
-  --color-fill: rgba(118, 118, 128, 0.12);
+  --color-fill: var(--color-gray-100);
   --color-fill-thumb: #ffffff;
   --color-input: rgba(255, 255, 255, 0.9);
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-accent: #1f7a45; /* verde de "exportacion" */
-  --color-accent-pressed: #186238;
-  --color-on-accent: #ffffff;
-  --color-focus: rgba(31, 122, 69, 0.35);
-  --color-error: #c4262e;
-  --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.04), 0 20px 50px -12px rgba(0, 0, 0, 0.18);
-  --shadow-thumb: 0 1px 2px rgba(0, 0, 0, 0.12), 0 3px 8px rgba(0, 0, 0, 0.08);
+  --color-border: var(--color-gray-200);
+  /* primary-700 y no 600: el texto blanco necesita contraste 4.5:1 */
+  --color-brand: var(--color-primary-700);
+  --color-brand-pressed: var(--color-primary-900);
+  --color-on-brand: #ffffff;
+  --color-focus: rgba(20, 184, 166, 0.35);
+  --color-error-text: var(--color-error);
+  --shadow-card: 0 1px 1px rgba(15, 23, 42, 0.04), 0 20px 50px -12px rgba(15, 23, 42, 0.18);
+  --shadow-thumb: 0 1px 2px rgba(15, 23, 42, 0.12), 0 3px 8px rgba(15, 23, 42, 0.08);
 
   /* Forma y espacio (rem para que escale con el tamaño de letra del usuario) */
   --radius-sm: 0.625rem;
@@ -39,29 +69,31 @@
   --duration-move: 350ms;
 
   color-scheme: light dark;
-  font: 100%/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font: 100%/1.5 var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Modo oscuro derivado de la misma paleta */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #000000;
-    --color-text: #f5f5f7;
-    --color-text-secondary: #a1a1a6;
-    --color-surface: rgba(28, 28, 30, 0.72);
+    --color-bg: var(--color-gray-900);
+    --color-text: var(--color-gray-50);
+    --color-text-secondary: var(--color-gray-400);
+    --color-surface: rgba(15, 23, 42, 0.72);
     --color-surface-edge: rgba(255, 255, 255, 0.08);
-    --color-fill: rgba(118, 118, 128, 0.24);
-    --color-fill-thumb: #636366;
-    --color-input: rgba(44, 44, 46, 0.9);
-    --color-border: rgba(255, 255, 255, 0.12);
-    --color-accent: #30a865;
-    --color-accent-pressed: #268a52;
-    --color-on-accent: #04170c;
-    --color-focus: rgba(48, 168, 101, 0.45);
-    --color-error: #ff6961;
+    --color-fill: rgba(148, 163, 184, 0.16);
+    --color-fill-thumb: var(--color-gray-700);
+    --color-input: rgba(51, 65, 85, 0.6);
+    --color-border: rgba(148, 163, 184, 0.24);
+    --color-brand: var(--color-primary-500);
+    --color-brand-pressed: var(--color-primary-600);
+    --color-on-brand: var(--color-gray-900);
+    --color-focus: rgba(94, 234, 212, 0.4);
+    /* el rojo puro no alcanza contraste sobre fondo oscuro */
+    --color-error-text: color-mix(in srgb, var(--color-error) 65%, white);
     --shadow-card: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
   }
 }
@@ -113,12 +145,12 @@ input {
 }
 
 .field__control:focus-within {
-  border-color: var(--color-accent);
+  border-color: var(--color-brand);
   box-shadow: 0 0 0 4px var(--color-focus);
 }
 
 .field[data-invalid] .field__control {
-  border-color: var(--color-error);
+  border-color: var(--color-error-text);
 }
 
 .field__input {
@@ -145,7 +177,7 @@ input {
 }
 
 .field__message--error {
-  color: var(--color-error);
+  color: var(--color-error-text);
 }
 
 /* ---------- Botón ---------- */
@@ -181,19 +213,19 @@ input {
 }
 
 .button--primary {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
 }
 
 .button--primary:active:not(:disabled) {
-  background: var(--color-accent-pressed);
+  background: var(--color-brand-pressed);
 }
 
 .button--plain {
   min-height: 2.75rem;
   padding: var(--space-2) var(--space-3);
   background: transparent;
-  color: var(--color-accent);
+  color: var(--color-brand);
   font-size: 0.875rem;
 }
 

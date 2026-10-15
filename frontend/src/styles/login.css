@@ -20,9 +20,9 @@
   inset: -20%;
   z-index: -1;
   background:
-    radial-gradient(40% 35% at 20% 25%, rgba(52, 168, 83, 0.35), transparent 70%),
-    radial-gradient(35% 30% at 80% 20%, rgba(255, 159, 10, 0.3), transparent 70%),
-    radial-gradient(40% 35% at 70% 80%, rgba(255, 69, 58, 0.22), transparent 70%);
+    radial-gradient(40% 35% at 20% 25%, color-mix(in srgb, var(--color-primary-500) 35%, transparent), transparent 70%),
+    radial-gradient(35% 30% at 80% 20%, color-mix(in srgb, var(--color-primary-300) 40%, transparent), transparent 70%),
+    radial-gradient(40% 35% at 70% 80%, color-mix(in srgb, var(--color-accent-500) 28%, transparent), transparent 70%);
   filter: blur(40px);
 }
 
@@ -63,8 +63,8 @@
   display: grid;
   place-items: center;
   border-radius: 1rem;
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
 }
 
 .auth__title {
@@ -100,8 +100,8 @@
 .auth__form-error {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-error) 12%, transparent);
-  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error-text) 12%, transparent);
+  color: var(--color-error-text);
   font-size: 0.875rem;
 }
 
