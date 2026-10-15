@@ -8,7 +8,7 @@
   display: grid;
   place-items: center;
   /* arriba deja espacio para el interruptor de tema */
-  padding: max(4rem, env(safe-area-inset-top)) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  padding: max(4rem, env(safe-area-inset-top)) var(--space-4) max(var(--space-2), env(safe-area-inset-bottom));
   overflow: hidden;
   isolation: isolate;
 }
