@@ -23,7 +23,8 @@ Rutas de la API: `POST /lotes`, `POST /lotes/{id}/fotos`, `POST /lotes/{id}/anal
 
 ## Comandos (actualizar cuando existan)
 - Web: `cd web && npm install && npm run dev`
-- API: `cd api && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload`
+- API (Python 3.12; copia `api/.env.example` a `api/.env` y llénalo): `cd api && python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements-dev.txt && uvicorn app.main:app --reload`
+- Pruebas de la API: `cd api && source .venv/bin/activate && pytest`
 
 ## Base de datos (Supabase, PostgreSQL)
 - Tablas: `frutas`, `clases`, `umbrales_grado`, `configuracion`, `fichas`, `lotes`, `fotos`, `frutos`, `analisis_lote`, `sugerencias`. Vista `bitacora_lotes`. Funciones `cerrar_analisis_lote()` y `alertas_comunitarias()`. Bucket privado `fotos-lotes` con ruta `{usuario_id}/{lote_id}/{foto_id}.jpg`.
@@ -63,6 +64,7 @@ Configuración inicial: `umbral_confianza` 0.60, `min_frutos_muestra` 30, `alert
 - El equipo debe entender y defender todo el código: prefiere soluciones simples y legibles, comenta solo lo que no es obvio y al terminar cada tarea explica en pocas líneas las decisiones importantes.
 - `AI_LOG.md`: después de cada tarea agrega una fila con fecha y hora, qué se pidió, qué generaste y qué archivos tocaste. Deja vacía la columna "Qué cambió el equipo" para que la llene una persona.
 - Commits pequeños y frecuentes, con mensajes en español en imperativo (ej. "Agrega trigger de destino"). No hagas push si no te lo piden.
+- Ramas: `main` ← PR desde `Wilver` (solo con lo ya probado). Cada issue va en una rama `feature/<nn>-<descripcion>` creada desde `Wilver`, con PR hacia `Wilver`. Antes de crear una rama feature, actualiza `Wilver`.
 
 ## Seguridad
 - Nunca escribas llaves en el código ni las subas al repo. Variables: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en web; `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en api. Mantén `.env.example` al día y `.env` en `.gitignore`.
