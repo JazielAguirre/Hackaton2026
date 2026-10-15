@@ -1,0 +1,372 @@
+/* ==========================================================================
+   FruitScan · estilos globales
+   Tokens de diseño, base tipográfica y componentes de UI reutilizables.
+   ========================================================================== */
+
+:root {
+  /* Paleta del equipo */
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-300: #5eead4;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-900: #134e4a;
+
+  --color-accent-50: #fff1ee;
+  --color-accent-500: #f97360;
+  --color-accent-600: #e85d4a;
+
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-700: #334155;
+  --color-gray-900: #0f172a;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #2563eb;
+
+  --font-sans: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  /* Roles: los componentes usan estos nombres, no los de la paleta */
+  --color-bg: var(--color-gray-50);
+  --color-text: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-500);
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-edge: rgba(255, 255, 255, 0.6);
+  --color-fill: var(--color-gray-100);
+  --color-fill-thumb: #ffffff;
+  --color-input: rgba(255, 255, 255, 0.9);
+  --color-border: var(--color-gray-200);
+  /* primary-700 y no 600: el texto blanco necesita contraste 4.5:1 */
+  --color-brand: var(--color-primary-700);
+  --color-brand-pressed: var(--color-primary-900);
+  --color-on-brand: #ffffff;
+  --color-focus: rgba(20, 184, 166, 0.35);
+  --color-error-text: var(--color-error);
+  --shadow-card: 0 1px 1px rgba(15, 23, 42, 0.04), 0 20px 50px -12px rgba(15, 23, 42, 0.18);
+  --shadow-thumb: 0 1px 2px rgba(15, 23, 42, 0.12), 0 3px 8px rgba(15, 23, 42, 0.08);
+
+  /* Forma y espacio (rem para que escale con el tamaño de letra del usuario) */
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.75rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* Movimiento: curva sin rebote (equivale a un resorte críticamente amortiguado) */
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-press: 100ms;
+  --duration-move: 350ms;
+
+  color-scheme: light;
+  font: 100%/1.5 var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Modo oscuro derivado de la misma paleta.
+   data-theme lo pone el script de index.html (antes de pintar) y luego useTheme. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: var(--color-gray-900);
+  --color-text: var(--color-gray-50);
+  --color-text-secondary: var(--color-gray-400);
+  --color-surface: rgba(15, 23, 42, 0.72);
+  --color-surface-edge: rgba(255, 255, 255, 0.08);
+  --color-fill: rgba(148, 163, 184, 0.16);
+  --color-fill-thumb: var(--color-gray-700);
+  --color-input: rgba(51, 65, 85, 0.6);
+  --color-border: rgba(148, 163, 184, 0.24);
+  --color-brand: var(--color-primary-500);
+  --color-brand-pressed: var(--color-primary-600);
+  --color-on-brand: var(--color-gray-900);
+  --color-focus: rgba(94, 234, 212, 0.4);
+  /* el rojo puro no alcanza contraste sobre fondo oscuro */
+  --color-error-text: color-mix(in srgb, var(--color-error) 65%, white);
+  --shadow-card: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* Cambio de tema con fundido suave en vez de un salto brusco de brillo */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 300ms;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--color-bg);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------- Campo de texto ---------- */
+
+.field {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.field__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+.field__control {
+  display: flex;
+  align-items: center;
+  background: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration-press) ease-out, box-shadow var(--duration-press) ease-out;
+}
+
+.field__control:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 4px var(--color-focus);
+}
+
+.field[data-invalid] .field__control {
+  border-color: var(--color-error-text);
+}
+
+.field__input {
+  flex: 1;
+  min-width: 0;
+  /* 16px mínimo: evita que iOS haga zoom al enfocar */
+  font-size: 1rem;
+  padding: var(--space-2) var(--space-3);
+  min-height: 2.5rem;
+  border: 0;
+  background: transparent;
+  outline: none;
+}
+
+.field__input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.field__message {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
+}
+
+.field__message--error {
+  color: var(--color-error-text);
+}
+
+/* ---------- Botón ---------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-6);
+  border: 0;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  /* La respuesta vive en el momento de presionar, no al soltar */
+  transition: transform var(--duration-press) ease-out, background-color var(--duration-press) ease-out;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--color-focus);
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.button--primary {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.button--primary:active:not(:disabled) {
+  background: var(--color-brand-pressed);
+}
+
+.button--plain {
+  min-height: 2.5rem;
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  color: var(--color-brand);
+  font-size: 0.875rem;
+}
+
+.button__spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Control segmentado ---------- */
+
+.segmented {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--segment-count), 1fr);
+  padding: 2px;
+  background: var(--color-fill);
+  border-radius: var(--radius-sm);
+}
+
+.segmented__thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--segment-count));
+  background: var(--color-fill-thumb);
+  border-radius: calc(var(--radius-sm) - 2px);
+  box-shadow: var(--shadow-thumb);
+  transform: translateX(calc(100% * var(--segment-index)));
+  transition: transform var(--duration-move) var(--ease-out);
+}
+
+.segmented__option {
+  position: relative; /* encima del thumb */
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity var(--duration-press) ease-out;
+}
+
+.segmented__option[aria-pressed='true'] {
+  font-weight: 600;
+}
+
+.segmented__option:active {
+  opacity: 0.6;
+}
+
+.segmented__option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus);
+}
+
+/* ---------- Interruptor de tema ---------- */
+
+.theme-toggle {
+  position: fixed;
+  top: max(var(--space-4), env(safe-area-inset-top));
+  right: max(var(--space-4), env(safe-area-inset-right));
+  z-index: 10;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-surface-edge);
+  border-radius: 50%;
+  background: var(--color-surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-thumb);
+  color: var(--color-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--duration-press) ease-out;
+}
+
+.theme-toggle:active {
+  transform: scale(0.92);
+}
+
+.theme-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--color-focus);
+}
+
+/* ---------- Accesibilidad ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+
+  .button:active:not(:disabled),
+  .theme-toggle:active {
+    transform: none;
+  }
+
+  .button__spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .theme-toggle {
+    background: var(--color-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --color-border: currentColor;
+    --color-text-secondary: var(--color-text);
+  }
+}
