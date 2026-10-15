@@ -188,6 +188,45 @@ En `ml/data/revision/` (no se sube a git):
 - `resumen_limpieza.json`: todos los conteos de esta sección, incluida la lista de fotos quitadas y su motivo.
 - `casi_duplicados_mangodhds.jpg` y `casi_duplicados_mangofruitbd.jpg`: hojas de ejemplos para revisar a ojo.
 
+## Umbral de confianza
+
+El error más caro del clasificador de mango es ver antracnosis como `sarna` o `cancro_bacteriano`. Las dos se guardan como `otro_defecto`, que va a `mercado_nacional` en vez de `separar`, y la antracnosis es justo la enfermedad poscosecha que se propaga. Para atrapar esos casos, `otro_defecto` de mango tiene su propio umbral: **0.85**. Si el modelo está menos seguro que eso, el fruto va a `revision_manual`. El resto de las clases sigue con el umbral general de 0.60.
+
+### Cómo funciona
+
+- `clases.umbral_confianza` es una columna opcional. Si tiene valor, el trigger de `frutos` la usa en vez de `configuracion.umbral_confianza` (migración `supabase/migrations/20261015223033_umbral_confianza_por_clase.sql`). Para cambiarlo basta un `update public.clases set umbral_confianza = ...`, sin tocar código.
+- `frutos.conf_clasificacion` es la **probabilidad top-1 de la clase que predice el modelo**, antes de agrupar en `otro_defecto`. Si el modelo dice `sarna` con 0.76, se guarda 0.76, no la suma de `sarna` + `cancro_bacteriano`.
+
+### Cómo se eligió 0.85 (solo con val)
+
+El análisis está en `ml/scripts/analizar_umbral.py`. Simula el trigger sobre las 220 fotos de val:
+
+| Umbral para `otro_defecto` | Antracnosis atrapadas | Bien clasificadas que van a revisión | Total a revisión |
+| ---: | ---: | ---: | ---: |
+| 0.60 (solo el general) | 0 de 1 | 5 (2.3 %) | 5 (2.3 %) |
+| 0.65 | 1 de 1 | 6 (2.8 %) | 7 (3.2 %) |
+| 0.70 | 1 de 1 | 7 (3.3 %) | 8 (3.6 %) |
+| 0.75 | 1 de 1 | 10 (4.7 %) | 11 (5.0 %) |
+| 0.80 | 1 de 1 | 11 (5.1 %) | 12 (5.5 %) |
+| **0.85** | **1 de 1** | **15 (7.0 %)** | **16 (7.3 %)** |
+| 0.90 | 1 de 1 | 23 (10.7 %) | 24 (10.9 %) |
+| 0.95 | 1 de 1 | 32 (14.9 %) | 33 (15.0 %) |
+
+- En val solo hay **una** antracnosis clasificada como `otro_defecto` (`An284`, confianza 0.608), así que la evidencia es poca. Cualquier umbral desde 0.65 la atrapa.
+- Se eligió el umbral más alto que mantiene la revisión cerca de 1 de cada 10 frutos. Eso da el mayor margen contra errores que todavía no hemos visto.
+- El equipo prefiere revisar 1 de cada 10 frutos a dejar pasar antracnosis. El 10 % es una guía, no un límite.
+
+### Confirmación en test (no es ciega)
+
+| Cómo se mide la confianza | Umbral | Antracnosis atrapadas | Total a revisión |
+| --- | ---: | ---: | ---: |
+| Suma de `sarna` + `cancro_bacteriano` (primer plan) | 0.90 | 0 de 3 | 1.4 % |
+| Top-1 (lo que quedó) | 0.85 | 3 de 3 | 11.8 % |
+
+**Aclaración:** el primer análisis medía la confianza de `otro_defecto` como la suma de `sarna` + `cancro_bacteriano`. Con esa medida, en val se había elegido 0.90. Al confirmarlo en test no atrapó ninguna de las 3 antracnosis mal clasificadas: el modelo repartía su probabilidad entre `sarna` y `cancro_bacteriano`, y la suma daba 0.999.
+
+**El cambio de suma a top-1 se decidió viendo test**, así que esta confirmación en test no es ciega y el 3 de 3 es optimista. La prueba honesta será con fotos reales de campo.
+
 ## Datasets, modelos y librerías
 
 ### Datasets
