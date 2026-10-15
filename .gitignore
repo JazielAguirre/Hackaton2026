@@ -1,2 +1,10 @@
 ml/data/
 AI_LOG.md
+
+# Entrenamiento
+*.pt
+runs/
+
+# Python
+.venv/
+__pycache__/
