@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import health
+from app.errores import registrar_manejadores
+from app.routers import health, yo
 
 app = FastAPI(
     title="FruitScan API",
@@ -16,4 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+registrar_manejadores(app)
+
 app.include_router(health.router)
+app.include_router(yo.router)

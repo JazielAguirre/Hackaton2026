@@ -18,6 +18,19 @@ uvicorn app.main:app --reload
 - Estado: `GET /health`
 - Pruebas: `pytest`
 
+## Autenticación
+La web inicia sesión con Supabase Auth y manda su `access_token` en cada petición:
+`Authorization: Bearer <access_token>`. Sin token o con uno inválido la API responde 401.
+
+- Lecturas y escrituras propias del usuario (lotes, fotos, Storage) usan un cliente con su JWT, así RLS decide qué puede ver.
+- `frutos`, `analisis_lote` y `sugerencias` solo los escribe la API con la service role.
+
+## Rutas
+| Ruta | Qué hace |
+| --- | --- |
+| `GET /health` | Estado de la API (sin sesión). |
+| `GET /yo` | Usuario del token; sirve para comprobar la sesión. |
+
 ## Variables de entorno
 | Variable | Uso |
 | --- | --- |
