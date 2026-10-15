@@ -199,6 +199,39 @@ input {
   color: var(--color-error-text);
 }
 
+/* Lista desplegable con la misma apariencia que el campo de texto */
+.field__control--select {
+  position: relative;
+}
+
+.field__control--select .field__input {
+  appearance: none;
+  padding-inline-end: 2.25rem;
+  cursor: pointer;
+}
+
+.field__control--select::after {
+  content: '';
+  position: absolute;
+  right: var(--space-4);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid var(--color-text-secondary);
+  border-bottom: 2px solid var(--color-text-secondary);
+  transform: translateY(-25%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* Oculto a la vista pero disponible para lectores de pantalla y teclado */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* ---------- Botón ---------- */
 
 .button {
