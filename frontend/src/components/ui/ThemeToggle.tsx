@@ -3,6 +3,8 @@ import type { Theme } from '../../hooks/useTheme'
 type ThemeToggleProps = {
   theme: Theme
   onToggle: () => void
+  /** Fijo en la esquina superior derecha (pantallas sin encabezado, como el login). */
+  floating?: boolean
 }
 
 const iconProps = {
@@ -17,13 +19,13 @@ const iconProps = {
   'aria-hidden': true,
 } as const
 
-export function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
+export function ThemeToggle({ theme, onToggle, floating = false }: ThemeToggleProps) {
   const isDark = theme === 'dark'
 
   return (
     <button
       type="button"
-      className="theme-toggle"
+      className={floating ? 'theme-toggle theme-toggle--floating' : 'theme-toggle'}
       aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       title={isDark ? 'Modo claro' : 'Modo oscuro'}
       onClick={onToggle}
