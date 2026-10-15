@@ -7,6 +7,7 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from postgrest import APIError
+from storage3.utils import StorageException
 from supabase_auth.errors import AuthApiError
 
 # Tablas cuyas filas son del usuario a través de su lote, como en las políticas RLS.
@@ -37,6 +38,9 @@ class FakeSupabase:
     def __init__(self, usuario_id: Any = None, tablas: dict[str, list[dict]] | None = None) -> None:
         self.usuario_id = str(usuario_id) if usuario_id else None
         self.tablas: dict[str, list[dict]] = copy.deepcopy(tablas or {})
+        self.storage = FakeStorage(self.usuario_id)
+        # Tablas donde un insert falla a propósito, para probar el manejo de errores.
+        self.fallar_insert_en: set[str] = set()
 
     def table(self, nombre: str) -> "FakeQuery":
         return FakeQuery(self, nombre)
@@ -116,7 +120,9 @@ class FakeQuery:
         filas = self.bd.tablas.setdefault(self.tabla, [])
 
         if self.operacion == "insert":
-            nuevas = self.datos if isinstance(self.datos, list) else [self.datos]
+            if self.tabla in self.bd.fallar_insert_en:
+                raise APIError({"code": "XX000", "message": "fallo simulado"})
+            nuevas =self.datos if isinstance(self.datos, list) else [self.datos]
             nuevas = [self.bd.completar(self.tabla, dict(fila)) for fila in nuevas]
             if not all(self.bd.visible(self.tabla, fila) for fila in nuevas):
                 raise APIError({"code": "42501", "message": "new row violates row-level security policy"})
@@ -137,3 +143,51 @@ class FakeQuery:
         if self.limite is not None:
             seleccion = seleccion[: self.limite]
         return SimpleNamespace(data=copy.deepcopy(seleccion))
+
+
+class FakeStorage:
+    """Bucket en memoria. Con usuario_id imita la política: solo su carpeta."""
+
+    def __init__(self, usuario_id: str | None) -> None:
+        self.usuario_id = usuario_id
+        self.objetos: dict[str, tuple[bytes, dict]] = {}
+        # Número de subidas que salen bien antes de fallar a propósito.
+        self.fallar_despues_de: int | None = None
+        self.subidas = 0
+
+    def from_(self, bucket: str) -> "FakeBucket":
+        assert bucket == "fotos-lotes", bucket
+        return FakeBucket(self)
+
+
+class FakeBucket:
+    def __init__(self, storage: FakeStorage) -> None:
+        self.storage = storage
+
+    def _permitida(self, ruta: str) -> bool:
+        return self.storage.usuario_id is None or ruta.split("/")[0] == self.storage.usuario_id
+
+    def upload(self, ruta: str, contenido: bytes, opciones: dict | None = None) -> None:
+        if self.storage.fallar_despues_de is not None and self.storage.subidas >= self.storage.fallar_despues_de:
+            raise StorageException("fallo simulado")
+        if not self._permitida(ruta):
+            raise StorageException("new row violates row-level security policy")
+        if ruta in self.storage.objetos:
+            raise StorageException("The resource already exists")
+        self.storage.objetos[ruta] = (contenido, opciones or {})
+        self.storage.subidas += 1
+
+    def remove(self, rutas: list[str]) -> list[dict]:
+        borradas = [r for r in rutas if r in self.storage.objetos and self._permitida(r)]
+        for ruta in borradas:
+            del self.storage.objetos[ruta]
+        return [{"name": ruta} for ruta in borradas]
+
+    def create_signed_urls(self, rutas: list[str], expira: int, opciones: dict | None = None) -> list[dict]:
+        respuesta = []
+        for ruta in rutas:
+            existe = ruta in self.storage.objetos and self._permitida(ruta)
+            url = f"https://storage.test/{ruta}?expira={expira}" if existe else None
+            error = None if existe else "Either the object does not exist or you do not have access to it"
+            respuesta.append({"path": ruta, "signedURL": url, "signedUrl": url, "error": error})
+        return respuesta

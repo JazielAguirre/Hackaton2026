@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from postgrest import APIError
+from storage3.utils import StorageException
 
 from app.deps import SESION_INVALIDA
 
@@ -25,4 +26,12 @@ def registrar_manejadores(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY,
             content={"detail": "Error al consultar la base de datos; intenta de nuevo"},
+        )
+
+    @app.exception_handler(StorageException)
+    def error_storage(_: Request, error: StorageException) -> JSONResponse:
+        logger.error("Error de Storage: %s", error)
+        return JSONResponse(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            content={"detail": "Error al guardar o leer las fotos; intenta de nuevo"},
         )
