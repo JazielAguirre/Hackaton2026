@@ -32,3 +32,14 @@ def file_hash(path: Path) -> str:
 def load_class_map(fruit: str) -> dict:
     """Mapeo de clases de una fruta desde ml/config/mapeo_clases.json."""
     return json.loads((CONFIG_DIR / "mapeo_clases.json").read_text())[fruit]
+
+
+def save_cleaning_summary(dataset: str, data: dict) -> Path:
+    """Guarda los conteos de la limpieza de un dataset en ml/data/revision/resumen_limpieza.json."""
+    path = REVIEW_DIR / "resumen_limpieza.json"
+    summary = json.loads(path.read_text()) if path.exists() else {}
+    summary[dataset] = data
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
+    return path
+

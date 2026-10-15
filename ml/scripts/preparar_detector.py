@@ -16,8 +16,8 @@ Pasos:
    la reduce a 1280 px en el lado largo.
 4. Todas las cajas pasan a la clase 0 = mango; las fotos sin fruto quedan como
    negativas (etiqueta vacía).
-5. Valida pares imagen-etiqueta y cajas entre 0 y 1, escribe data.yaml y un zip
-   para subir a Drive.
+5. Valida pares imagen-etiqueta y cajas entre 0 y 1, escribe data.yaml, un zip
+   para subir a Drive y los conteos en ml/data/revision/resumen_limpieza.json.
 """
 
 import argparse
@@ -31,7 +31,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image, ImageOps
 
-from comun import PROCESSED_DIR, RAW_DIR, REVIEW_DIR, file_hash, list_images
+from comun import PROCESSED_DIR, RAW_DIR, REVIEW_DIR, file_hash, list_images, save_cleaning_summary
 from duplicados import distance_matrix, group_ids, near_duplicate_pairs, perceptual_hashes, save_pairs_sheet
 
 SPLITS = ("train", "val", "test")
@@ -134,13 +134,11 @@ def validate(dest: Path) -> list[str]:
     return problems
 
 
-def print_summary(kept: pd.DataFrame) -> None:
+def final_table(kept: pd.DataFrame) -> pd.DataFrame:
     kept = kept.assign(cajas=[len(mango_label(p).splitlines()) for p in kept["etiqueta"]])
-    summary = kept.groupby("split").agg(imagenes=("origen", "size"), cajas=("cajas", "sum"),
-                                        negativas=("cajas", lambda c: (c == 0).sum()),
-                                        aumentadas=("aumentada", "sum")).loc[list(SPLITS)]
-    print("\nDataset final:")
-    print(summary.to_string())
+    return kept.groupby("split").agg(imagenes=("origen", "size"), cajas=("cajas", "sum"),
+                                     negativas=("cajas", lambda c: (c == 0).sum()),
+                                     aumentadas=("aumentada", "sum")).loc[list(SPLITS)]
 
 
 def main() -> None:
@@ -153,24 +151,37 @@ def main() -> None:
     args = parser.parse_args()
 
     df = load_dataset(args.origen)
-    print(f"Imágenes leídas: {len(df)} ({', '.join(f'{s} {n}' for s, n in df['split'].value_counts()[list(SPLITS)].items())})")
+    read = {s: int(n) for s, n in df["split"].value_counts()[list(SPLITS)].items()}
+    print(f"Imágenes leídas: {len(df)} ({', '.join(f'{s} {n}' for s, n in read.items())})")
     print(f"Fotos aumentadas detectadas: {df['aumentada'].sum()} (el README dice 83)")
+    summary = {"umbral_casi_duplicados": args.umbral, "imagenes_leidas": read,
+               "aumentadas": {s: int(n) for s, n in df[df["aumentada"]]["split"].value_counts().items()}}
 
     dist = distance_matrix(np.stack([perceptual_hashes(p) for p in df["origen"]]))
     pairs = near_duplicate_pairs(dist, args.umbral)
     df["grupo"] = group_ids(len(df), pairs)
     crossing = sum(df.loc[i, "split"] != df.loc[j, "split"] for i, j, _ in pairs)
+    by_distance = {int(d): n for d, n in sorted(Counter(d for *_, d in pairs).items())}
     print(f"\nCasi duplicados (distancia <= {args.umbral}): {len(pairs)} pares, {crossing} entre splits distintos")
-    print(f"  por distancia: {dict(sorted(Counter(d for *_, d in pairs).items()))}")
+    print(f"  por distancia: {by_distance}")
+    summary["casi_duplicados"] = {"pares": len(pairs), "pares_por_distancia": by_distance,
+                                  "pares_entre_splits": int(crossing)}
 
     df["motivo"] = removal_reasons(df)
     removed = df[df["motivo"] != ""]
+    reasons = pd.crosstab(removed["motivo"], removed["split"]).reindex(columns=list(SPLITS), fill_value=0)
     print(f"\nFotos que se quitan: {len(removed)}")
-    print(pd.crosstab(removed["motivo"], removed["split"]).reindex(columns=list(SPLITS), fill_value=0).to_string())
+    print(reasons.to_string())
+    summary["quitadas"] = {m: {s: int(n) for s, n in row.items()} for m, row in reasons.iterrows()}
+    summary["quitadas_por_split"] = {s: int(reasons[s].sum()) for s in SPLITS}
+    summary["quitadas_lista"] = sorted(f"{r.split}/{r.origen.name}: {r.motivo}" for r in removed.itertuples())
     save_examples(df, dist, REVIEW_DIR / "casi_duplicados_mangofruitbd.jpg")
 
     kept = df[df["motivo"] == ""]
-    print_summary(kept)
+    table = final_table(kept)
+    print("\nDataset final:")
+    print(table.to_string())
+    summary["final"] = {s: {k: int(v) for k, v in row.items()} for s, row in table.iterrows()}
 
     if args.simular:
         print("\nSimulación: no se escribió nada.")
@@ -198,6 +209,7 @@ def main() -> None:
     zip_path = shutil.make_archive(str(PROCESSED_DIR / "detector_mango"), "zip",
                                    root_dir=PROCESSED_DIR, base_dir=DEST.relative_to(PROCESSED_DIR))
     print(f"Dataset escrito en {DEST}\nZip para Drive: {zip_path}")
+    print(f"Conteos de la limpieza: {save_cleaning_summary('mangofruitbd', summary)}")
 
 
 if __name__ == "__main__":
