@@ -4,6 +4,118 @@ Control de calidad visual de fruta por lote: el productor toma o sube fotos, el 
 
 Proyecto del Hackatón LSC 2026, equipo Los Claudios.
 
+## Entrenar los modelos
+
+Todo lo de entrenamiento vive en `ml/`: scripts en `ml/scripts/`, mapeo de clases en `ml/config/mapeo_clases.json` y notebook de Colab en `ml/notebooks/`. Los datos (`ml/data/`), los pesos (`*.pt`) y las corridas (`ml/runs/`) no se suben a git.
+
+| Modelo | Base | Datos | Resultado |
+| --- | --- | --- | --- |
+| Clasificador de mango (5 clases) | `yolo26n-cls.pt` (respaldo `yolo11n-cls.pt`) | MangoDHDS | `ml/modelos/clasificador_mango/` |
+| Detector de frutos (por ahora solo mango) | `yolo26n.pt` (respaldo `yolo11n.pt`) | MangoFruitBD | `ml/modelos/detector/` |
+
+Cada carpeta de resultado tiene `best.pt` y `metricas.json`:
+- **Clasificador:** exactitud, F1 macro, matriz de confusión y métricas por clase en test.
+- **Detector:** mAP50, mAP50-95, precisión y recall en val y test.
+
+Los pesos base se descargan solos a `ml/modelos/base/`. Para no subir pesos a git, el equipo comparte los `best.pt` entrenados en la carpeta `FruitScan/modelos/` de Google Drive.
+
+### 1. Descargar los datos crudos
+
+Descarga los dos datasets de Mendeley (links en [Datasets, modelos y librerías](#datasets-modelos-y-librerías)) y descomprímelos así. Los dos traen zips dentro del zip:
+
+```bash
+cd ml/data/raw/mango
+
+# MangoDHDS: el zip trae un zip por clase
+unzip -q "mangodhds/MangoDHDS A Dataset of Diseased and Healthy Mangoe.zip" -d mangodhds
+for z in mangodhds/*/ZIP-FILES_IMAGES/*.zip; do unzip -q "$z" -d mangodhds/imagenes; done
+
+# MangoFruitBD: el zip trae otro zip con el dataset
+unzip -q "mangofruitbd/MangoFruitBD A Bounding-Box Annotated Image Datase.zip" -d mangofruitbd/_tmp
+unzip -q mangofruitbd/_tmp/*/MangoFruitBD.zip -d mangofruitbd && rm -r mangofruitbd/_tmp
+```
+
+Deben quedar `ml/data/raw/mango/mangodhds/imagenes/<clase>/*.jpg` y `ml/data/raw/mango/mangofruitbd/MangoFruitBD/{images,labels}/{train,val,test}/`.
+
+### 2. En local, con CPU
+
+Instala el entorno; el índice extra baja torch para CPU, mucho más ligero que la versión con CUDA:
+
+```bash
+cd ml
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+cd ..
+```
+
+Revisa y prepara los datos (detalle en [Limpieza de datos](#limpieza-de-datos)):
+
+```bash
+python ml/scripts/revisar_datos.py              # conteos, dañadas, duplicados
+python ml/scripts/preparar_clasificador.py      # agrega --simular para ver sin escribir
+python ml/scripts/preparar_detector.py
+```
+
+Entrena y evalúa:
+
+```bash
+python ml/scripts/entrenar_clasificador.py
+python ml/scripts/entrenar_detector.py
+python ml/scripts/evaluar_detector.py --fotos ruta/a/fotos   # dibuja cajas en tus fotos
+```
+
+Valores por defecto para CPU (todos se cambian por línea de comandos; ve `--help`):
+
+| | imgsz | batch | épocas | paciencia | otros |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Clasificador | 224 | 32 | 20 | 5 | |
+| Detector | 480 | 8 | 30 | 8 | 10 capas congeladas; caché en RAM solo si cabe |
+
+Tiempos medidos con 1 época, en una laptop con Intel i5-1235U (10 núcleos, 12 hilos), 7.5 GB de RAM y sin GPU:
+
+| Modelo | Por época | Entrenamiento completo | RAM máxima |
+| --- | ---: | ---: | ---: |
+| Clasificador | ~30 s | 20 épocas ≈ 10 min | 1.3 GB |
+| Detector | ~2.2 min (con validación) | 30 épocas ≈ 1 h 10 min | 2.3 GB (con caché en RAM) |
+
+Si el modelo deja de mejorar, la paciencia lo detiene antes. Si la laptop se calienta, puede tardar más.
+
+Consejos para CPU:
+- **Cierra el navegador antes de entrenar.** El detector guarda las fotos en RAM si hay espacio, y eso lo hace más rápido.
+- **Workers:** se usa un tercio de los hilos del CPU para cargar imágenes; el resto entrena.
+- **Si te quedas sin memoria,** baja `--batch` o usa `--cache no`.
+
+### 3. En Google Colab, con GPU
+
+1. Corre en tu computadora los dos scripts `preparar_*.py`. Generan `ml/data/processed/clasificador_mango.zip` y `ml/data/processed/detector_mango.zip`.
+2. Sube los dos zips a la carpeta `FruitScan/` de tu Google Drive.
+3. Sube la rama a GitHub (`git push`). El notebook clona el repo desde ahí; ajusta la variable `RAMA` si hace falta.
+4. Abre `ml/notebooks/entrenar_colab.ipynb` en Colab y elige *Entorno de ejecución → GPU T4*.
+5. Ejecuta todas las celdas.
+
+El notebook monta Drive, instala `requirements.txt` (sin torch, que Colab ya trae con CUDA), descomprime los datos y entrena los dos modelos. También copia `best.pt`, `metricas.json` y las gráficas a `FruitScan/modelos/` en Drive.
+
+En GPU usa más épocas, fotos de 640 px y ninguna capa congelada en el detector.
+
+### 4. En otra computadora con GPU (NVIDIA)
+
+Instala sin el índice de CPU, para que pip baje torch con CUDA:
+
+```bash
+cd ml
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cd ..
+```
+
+Para los datos, descomprime los dos zips de `ml/data/processed/` en esa misma carpeta, o repite los pasos 1 y 2 de preparación. Después entrena con la GPU:
+
+```bash
+python ml/scripts/entrenar_clasificador.py --device 0 --batch 64 --epochs 50 --patience 10
+python ml/scripts/entrenar_detector.py --device 0 --imgsz 640 --batch 32 --epochs 100 --patience 20 --freeze 0
+python ml/scripts/evaluar_detector.py --device 0
+```
+
 ## Limpieza de datos
 
 Antes de entrenar se quitan duplicados para que ninguna foto de validación o prueba (val/test) tenga una copia en entrenamiento (train). Si la tuviera, las métricas saldrían mejores de lo que el modelo es en realidad. Los scripts `ml/scripts/preparar_clasificador.py` y `ml/scripts/preparar_detector.py` hacen toda la limpieza; con `--simular` muestran qué harían sin escribir nada.
@@ -75,3 +187,36 @@ Por eso la regla es la misma que para las imágenes sintéticas de fresa: **las 
 En `ml/data/revision/` (no se sube a git):
 - `resumen_limpieza.json`: todos los conteos de esta sección, incluida la lista de fotos quitadas y su motivo.
 - `casi_duplicados_mangodhds.jpg` y `casi_duplicados_mangofruitbd.jpg`: hojas de ejemplos para revisar a ojo.
+
+## Datasets, modelos y librerías
+
+### Datasets
+
+| Dataset | Uso | Licencia | Enlace |
+| --- | --- | --- | --- |
+| MangoDHDS | Clasificador de mango | CC BY 4.0 | [Mendeley Data, V1](https://data.mendeley.com/datasets/b4nrw5hyyc/1) |
+| MangoFruitBD | Detector (cajas de mango) | CC BY-NC (Mendeley indica 3.0; el `LICENSE.txt` del zip dice 4.0). **Solo uso no comercial.** | [Mendeley Data, V2](https://data.mendeley.com/datasets/bhrz29mkmr/2) |
+
+Citas:
+- Barhate, Priyanka; Barhate, Bhojraj; Joshi, Makarand (2025). *MangoDHDS: A Dataset of Diseased and Healthy Mangoes of 1.5 K Images*. Mendeley Data, V1. doi: [10.17632/b4nrw5hyyc.1](https://doi.org/10.17632/b4nrw5hyyc.1)
+- Islam, Ariful; Oishi, Sadia Afroz; Hasan, Md. Maksudul; Ray, Sajeeb Kumar; Hossain, Md. Anwar; Islam, Naima; Kumar, Anomik (2026). *MangoFruitBD: A Bounding-Box Annotated Image Dataset for Detecting Healthy and Diseased Mango Fruits in Bangladeshi Orchards*. Mendeley Data, V2. doi: [10.17632/bhrz29mkmr.2](https://doi.org/10.17632/bhrz29mkmr.2)
+
+Cambios hechos a los datos (las licencias CC BY piden indicarlos): se quitaron duplicados, se dividió MangoDHDS en train/val/test y sus clases se tradujeron al español. En MangoFruitBD, las fotos se giraron según EXIF y se redujeron a 1280 px, y todas las cajas pasaron a la clase `mango`. Ver [Limpieza de datos](#limpieza-de-datos).
+
+### Modelos preentrenados
+
+- `yolo26n-cls.pt` y `yolo26n.pt` de Ultralytics (respaldo: `yolo11n-cls.pt` y `yolo11n.pt`), con licencia AGPL-3.0.
+
+### Librerías de entrenamiento (`ml/requirements.txt`)
+
+| Librería | Versión | Licencia |
+| --- | --- | --- |
+| Ultralytics | 8.4.170 | AGPL-3.0 |
+| PyTorch | 2.14.1 | BSD-3-Clause (y otras permisivas) |
+| torchvision | 0.29.1 | BSD-3-Clause |
+| OpenCV (opencv-python) | 4.14.0.94 | Apache 2.0 |
+| Pillow | 12.3.0 | MIT-CMU |
+| pandas | 3.0.6 | BSD-3-Clause |
+| Matplotlib | 3.11.2 | Licencia de Matplotlib (tipo PSF) |
+| scikit-learn | 1.9.1 | BSD-3-Clause |
+| ImageHash | 4.3.2 | BSD-2-Clause |
