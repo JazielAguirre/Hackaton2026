@@ -12,14 +12,15 @@ def test_health_responde_ok():
 
 
 def test_cors_permite_el_origen_del_front():
-    respuesta = client.options(
-        "/health",
-        headers={
-            "Origin": "http://localhost:5173",
-            "Access-Control-Request-Method": "GET",
-        },
-    )
-    assert respuesta.headers["access-control-allow-origin"] == "http://localhost:5173"
+    for origen in ("http://localhost:5173", "http://127.0.0.1:5173"):
+        respuesta = client.options(
+            "/health",
+            headers={
+                "Origin": origen,
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert respuesta.headers["access-control-allow-origin"] == origen
 
 
 def test_cors_rechaza_otros_origenes():

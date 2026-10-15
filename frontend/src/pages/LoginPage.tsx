@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '../components/ui/Button'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { TextField } from '../components/ui/TextField'
+import { MensajeParaUsuario } from '../lib/auth'
 import '../styles/login.css'
 
 export type AuthMode = 'login' | 'registro'
@@ -76,8 +77,10 @@ export function LoginPage({ onSubmit }: LoginPageProps) {
     setFormError(undefined)
     try {
       await onSubmit({ mode, nombre: values.nombre.trim(), correo: values.correo.trim(), contrasena: values.contrasena })
-    } catch {
-      setFormError('No pudimos conectar. Revisa tu internet e intenta de nuevo.')
+    } catch (error) {
+      setFormError(
+        error instanceof MensajeParaUsuario ? error.message : 'No pudimos conectar. Revisa tu internet e intenta de nuevo.',
+      )
     } finally {
       setSubmitting(false)
     }

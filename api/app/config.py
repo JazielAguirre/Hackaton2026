@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_anon_key: str
     supabase_service_role_key: str
-    # Separados por coma en CORS_ORIGINS
-    cors_origins: str = "http://localhost:5173"
+    # Separados por coma en CORS_ORIGINS. Por defecto, el servidor de Vite con ambos nombres.
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     @property
     def cors_origins_list(self) -> list[str]:

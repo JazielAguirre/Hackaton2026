@@ -40,4 +40,4 @@ La web inicia sesión con Supabase Auth y manda su `access_token` en cada petici
 | `SUPABASE_URL` | URL del proyecto Supabase. |
 | `SUPABASE_ANON_KEY` | Cliente con el JWT del usuario (aplica RLS). |
 | `SUPABASE_SERVICE_ROLE_KEY` | Escrituras de la API. **Solo existe en `api/`**, nunca en `web/` ni en git. |
-| `CORS_ORIGINS` | Orígenes del front separados por coma. Por defecto `http://localhost:5173`. |
+| `CORS_ORIGINS` | Orígenes del front separados por coma. Por defecto `http://localhost:5173,http://127.0.0.1:5173`. |

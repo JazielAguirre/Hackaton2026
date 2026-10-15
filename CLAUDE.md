@@ -22,7 +22,7 @@ Flujo: foto → detector YOLO (ubica cada fruto y su tipo) → recorte → clasi
 Rutas de la API: `POST /lotes`, `POST /lotes/{id}/fotos`, `POST /lotes/{id}/analizar`, `GET /lotes/{id}`, `GET /lotes/{id}/reporte.pdf`, `GET /bitacora`.
 
 ## Comandos (actualizar cuando existan)
-- Web: `cd frontend && npm install && npm run dev`
+- Web (copia `frontend/.env.example` a `frontend/.env` y llénalo; la API debe estar corriendo para `/yo`): `cd frontend && npm install && npm run dev`
 - API (Python 3.12; copia `api/.env.example` a `api/.env` y llénalo): `cd api && python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements-dev.txt && uvicorn app.main:app --reload`
 - Pruebas de la API: `cd api && source .venv/bin/activate && pytest`
 
