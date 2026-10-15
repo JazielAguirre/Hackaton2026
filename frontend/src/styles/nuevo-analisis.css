@@ -1,0 +1,289 @@
+/* ==========================================================================
+   FruitScan · Nuevo análisis
+   ========================================================================== */
+
+.nuevo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 40rem;
+  margin: 0 auto;
+  /* ocupa toda la pantalla para que la barra de acción quede abajo aunque haya poco contenido */
+  min-height: calc(100dvh - var(--header-height) - var(--space-6) - var(--space-8));
+}
+
+/* ---------- Encabezado de la página ---------- */
+
+.nuevo__header {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.nuevo__back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2.75rem;
+  margin-inline-start: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-brand);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--duration-press) ease-out;
+}
+
+.nuevo__back:active {
+  opacity: 0.5;
+}
+
+.nuevo__back:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus);
+}
+
+.nuevo__title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.nuevo__subtitle {
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+/* ---------- Datos del lote ---------- */
+
+.nuevo__datos {
+  gap: var(--space-3);
+}
+
+/* ---------- Fotos ---------- */
+
+.fotos-lote {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.fotos-lote__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.fotos-lote__count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.fotos-lote__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.foto-action {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  min-height: 5rem;
+  padding: var(--space-3);
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-input);
+  color: var(--color-brand);
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--duration-press) ease-out, background-color var(--duration-press) ease-out;
+}
+
+.foto-action--primary {
+  border-style: solid;
+  border-color: transparent;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.foto-action:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.foto-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--color-focus);
+}
+
+.foto-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.fotos-lote__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.foto-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-fill);
+  /* cada foto se "materializa" al agregarse */
+  animation: foto-in var(--duration-move) var(--ease-out) both;
+}
+
+@keyframes foto-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+    filter: blur(6px);
+  }
+}
+
+.foto-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.foto-thumb__remove {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform var(--duration-press) ease-out;
+}
+
+/* Área táctil de 44px aunque el botón se vea más pequeño */
+.foto-thumb__remove::before {
+  content: '';
+  position: absolute;
+  inset: -0.5rem;
+}
+
+.foto-thumb__remove:active {
+  transform: scale(0.88);
+}
+
+.foto-thumb__remove:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+}
+
+.fotos-lote__tips {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0;
+  padding-inline-start: 1.125rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+/* ---------- Barra de acción fija ---------- */
+
+.nuevo__bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: grid;
+  gap: var(--space-2);
+  margin-top: auto;
+  margin-bottom: calc(var(--space-8) * -1); /* llega al borde inferior, sobre el padding de .app-main */
+  margin-inline: calc(var(--space-4) * -1);
+  padding: var(--space-3) var(--space-4) max(var(--space-3), env(safe-area-inset-bottom));
+  /* material translúcido: el formulario pasa por debajo */
+  background: var(--color-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 -10px 24px -20px rgba(15, 23, 42, 0.35);
+}
+
+.nuevo__bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.nuevo__summary {
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nuevo__form-error {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-error-text) 12%, transparent);
+  color: var(--color-error-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.nuevo__note {
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+@media (min-width: 40rem) {
+  .nuevo__datos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nuevo__datos-nota {
+    grid-column: 1 / -1;
+  }
+
+  .nuevo__bar {
+    margin-inline: 0;
+    border-radius: 1.25rem 1.25rem 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foto-thumb {
+    animation: none;
+  }
+
+  .foto-action:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .nuevo__bar {
+    background: var(--color-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

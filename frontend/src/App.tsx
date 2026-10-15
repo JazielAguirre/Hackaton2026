@@ -8,8 +8,13 @@ import { useTheme } from './hooks/useTheme'
 import { cerrarSesion, crearCuenta, iniciarSesion } from './lib/auth'
 import { HomePage } from './pages/HomePage'
 import { LoginPage, type AuthData } from './pages/LoginPage'
+import { NuevoAnalisisPage, type NuevoLote } from './pages/NuevoAnalisisPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { lotesEjemplo } from './services/datosEjemplo'
 import type { LoteBitacora } from './utils/dominio'
+
+// TODO (backend): parcelas reales del productor (lotes.parcela sin repetir); por ahora salen de los datos de ejemplo
+const PARCELAS = [...new Set(lotesEjemplo.map((lote) => lote.parcela).filter((p): p is string => Boolean(p)))]
 
 export default function App() {
   const { theme, toggleTheme } = useTheme()
@@ -27,6 +32,12 @@ export default function App() {
   // TODO (backend): GET /lotes/{id}/reporte.pdf
   function handleDescargarReporte(lote: LoteBitacora) {
     console.info('Descargar reporte PDF del lote', lote.id)
+  }
+
+  // TODO (backend): POST /lotes, POST /lotes/{id}/fotos y POST /lotes/{id}/analizar
+  async function handleNuevoLote(lote: NuevoLote) {
+    console.info('Nuevo lote listo para enviar:', lote.nombre, lote.parcela, lote.fotos.length, 'fotos')
+    throw new Error('El envío a la API todavía no está conectado. Tus datos no se guardaron.')
   }
 
   function navegar(id: NavId) {
@@ -83,6 +94,8 @@ export default function App() {
       <main className="app-main">
         {vista === 'inicio' || !item ? (
           <HomePage nombre={usuario.nombre} onNuevoAnalisis={() => navegar('nuevo')} onDescargarReporte={handleDescargarReporte} />
+        ) : vista === 'nuevo' ? (
+          <NuevoAnalisisPage parcelas={PARCELAS} onSubmit={handleNuevoLote} onCancelar={() => navegar('inicio')} />
         ) : (
           <PlaceholderPage titulo={item.label} icon={item.icon} onVolver={() => navegar('inicio')} />
         )}
