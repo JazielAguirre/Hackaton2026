@@ -88,6 +88,7 @@ export type Database = {
           fruta_id: string
           id: number
           nombre: string
+          umbral_confianza: number | null
         }
         Insert: {
           codigo: string
@@ -96,6 +97,7 @@ export type Database = {
           fruta_id: string
           id?: number
           nombre: string
+          umbral_confianza?: number | null
         }
         Update: {
           codigo?: string
@@ -104,6 +106,7 @@ export type Database = {
           fruta_id?: string
           id?: number
           nombre?: string
+          umbral_confianza?: number | null
         }
         Relationships: [
           {
