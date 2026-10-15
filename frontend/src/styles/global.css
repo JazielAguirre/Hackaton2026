@@ -1,0 +1,292 @@
+/* ==========================================================================
+   FruitScan · estilos globales
+   Tokens de diseño, base tipográfica y componentes de UI reutilizables.
+   ========================================================================== */
+
+:root {
+  /* Color */
+  --color-bg: #f5f5f7;
+  --color-text: #1d1d1f;
+  --color-text-secondary: #6e6e73;
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-edge: rgba(255, 255, 255, 0.6);
+  --color-fill: rgba(118, 118, 128, 0.12);
+  --color-fill-thumb: #ffffff;
+  --color-input: rgba(255, 255, 255, 0.9);
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-accent: #1f7a45; /* verde de "exportacion" */
+  --color-accent-pressed: #186238;
+  --color-on-accent: #ffffff;
+  --color-focus: rgba(31, 122, 69, 0.35);
+  --color-error: #c4262e;
+  --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.04), 0 20px 50px -12px rgba(0, 0, 0, 0.18);
+  --shadow-thumb: 0 1px 2px rgba(0, 0, 0, 0.12), 0 3px 8px rgba(0, 0, 0, 0.08);
+
+  /* Forma y espacio (rem para que escale con el tamaño de letra del usuario) */
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.75rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* Movimiento: curva sin rebote (equivale a un resorte críticamente amortiguado) */
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-press: 100ms;
+  --duration-move: 350ms;
+
+  color-scheme: light dark;
+  font: 100%/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #000000;
+    --color-text: #f5f5f7;
+    --color-text-secondary: #a1a1a6;
+    --color-surface: rgba(28, 28, 30, 0.72);
+    --color-surface-edge: rgba(255, 255, 255, 0.08);
+    --color-fill: rgba(118, 118, 128, 0.24);
+    --color-fill-thumb: #636366;
+    --color-input: rgba(44, 44, 46, 0.9);
+    --color-border: rgba(255, 255, 255, 0.12);
+    --color-accent: #30a865;
+    --color-accent-pressed: #268a52;
+    --color-on-accent: #04170c;
+    --color-focus: rgba(48, 168, 101, 0.45);
+    --color-error: #ff6961;
+    --shadow-card: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--color-bg);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------- Campo de texto ---------- */
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.field__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+.field__control {
+  display: flex;
+  align-items: center;
+  background: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration-press) ease-out, box-shadow var(--duration-press) ease-out;
+}
+
+.field__control:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-focus);
+}
+
+.field[data-invalid] .field__control {
+  border-color: var(--color-error);
+}
+
+.field__input {
+  flex: 1;
+  min-width: 0;
+  /* 16px mínimo: evita que iOS haga zoom al enfocar */
+  font-size: 1rem;
+  padding: var(--space-3) var(--space-4);
+  min-height: 3rem;
+  border: 0;
+  background: transparent;
+  outline: none;
+}
+
+.field__input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.field__message {
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
+}
+
+.field__message--error {
+  color: var(--color-error);
+}
+
+/* ---------- Botón ---------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 3rem;
+  padding: var(--space-3) var(--space-6);
+  border: 0;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  /* La respuesta vive en el momento de presionar, no al soltar */
+  transition: transform var(--duration-press) ease-out, background-color var(--duration-press) ease-out;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--color-focus);
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.button--primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.button--primary:active:not(:disabled) {
+  background: var(--color-accent-pressed);
+}
+
+.button--plain {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 0.875rem;
+}
+
+.button__spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Control segmentado ---------- */
+
+.segmented {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--segment-count), 1fr);
+  padding: 2px;
+  background: var(--color-fill);
+  border-radius: var(--radius-sm);
+}
+
+.segmented__thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--segment-count));
+  background: var(--color-fill-thumb);
+  border-radius: calc(var(--radius-sm) - 2px);
+  box-shadow: var(--shadow-thumb);
+  transform: translateX(calc(100% * var(--segment-index)));
+  transition: transform var(--duration-move) var(--ease-out);
+}
+
+.segmented__option {
+  position: relative; /* encima del thumb */
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity var(--duration-press) ease-out;
+}
+
+.segmented__option[aria-pressed='true'] {
+  font-weight: 600;
+}
+
+.segmented__option:active {
+  opacity: 0.6;
+}
+
+.segmented__option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus);
+}
+
+/* ---------- Accesibilidad ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+
+  .button:active:not(:disabled) {
+    transform: none;
+  }
+
+  .button__spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --color-border: currentColor;
+    --color-text-secondary: var(--color-text);
+  }
+}
