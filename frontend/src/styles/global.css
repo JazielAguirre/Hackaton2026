@@ -68,7 +68,7 @@
   --duration-press: 100ms;
   --duration-move: 350ms;
 
-  color-scheme: light dark;
+  color-scheme: light;
   font: 100%/1.5 var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg);
@@ -76,26 +76,32 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Modo oscuro derivado de la misma paleta */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: var(--color-gray-900);
-    --color-text: var(--color-gray-50);
-    --color-text-secondary: var(--color-gray-400);
-    --color-surface: rgba(15, 23, 42, 0.72);
-    --color-surface-edge: rgba(255, 255, 255, 0.08);
-    --color-fill: rgba(148, 163, 184, 0.16);
-    --color-fill-thumb: var(--color-gray-700);
-    --color-input: rgba(51, 65, 85, 0.6);
-    --color-border: rgba(148, 163, 184, 0.24);
-    --color-brand: var(--color-primary-500);
-    --color-brand-pressed: var(--color-primary-600);
-    --color-on-brand: var(--color-gray-900);
-    --color-focus: rgba(94, 234, 212, 0.4);
-    /* el rojo puro no alcanza contraste sobre fondo oscuro */
-    --color-error-text: color-mix(in srgb, var(--color-error) 65%, white);
-    --shadow-card: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
-  }
+/* Modo oscuro derivado de la misma paleta.
+   data-theme lo pone el script de index.html (antes de pintar) y luego useTheme. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: var(--color-gray-900);
+  --color-text: var(--color-gray-50);
+  --color-text-secondary: var(--color-gray-400);
+  --color-surface: rgba(15, 23, 42, 0.72);
+  --color-surface-edge: rgba(255, 255, 255, 0.08);
+  --color-fill: rgba(148, 163, 184, 0.16);
+  --color-fill-thumb: var(--color-gray-700);
+  --color-input: rgba(51, 65, 85, 0.6);
+  --color-border: rgba(148, 163, 184, 0.24);
+  --color-brand: var(--color-primary-500);
+  --color-brand-pressed: var(--color-primary-600);
+  --color-on-brand: var(--color-gray-900);
+  --color-focus: rgba(94, 234, 212, 0.4);
+  /* el rojo puro no alcanza contraste sobre fondo oscuro */
+  --color-error-text: color-mix(in srgb, var(--color-error) 65%, white);
+  --shadow-card: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* Cambio de tema con fundido suave en vez de un salto brusco de brillo */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 300ms;
 }
 
 *,
@@ -126,11 +132,11 @@ input {
 
 .field {
   display: grid;
-  gap: var(--space-1);
+  gap: 0.125rem;
 }
 
 .field__label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.005em;
 }
@@ -158,8 +164,8 @@ input {
   min-width: 0;
   /* 16px mínimo: evita que iOS haga zoom al enfocar */
   font-size: 1rem;
-  padding: var(--space-3) var(--space-4);
-  min-height: 3rem;
+  padding: var(--space-2) var(--space-3);
+  min-height: 2.5rem;
   border: 0;
   background: transparent;
   outline: none;
@@ -171,7 +177,8 @@ input {
 }
 
 .field__message {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
   letter-spacing: 0.01em;
   color: var(--color-text-secondary);
 }
@@ -187,8 +194,8 @@ input {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: 3rem;
-  padding: var(--space-3) var(--space-6);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-6);
   border: 0;
   border-radius: var(--radius-md);
   font-weight: 600;
@@ -222,8 +229,8 @@ input {
 }
 
 .button--plain {
-  min-height: 2.75rem;
-  padding: var(--space-2) var(--space-3);
+  min-height: 2.5rem;
+  padding: var(--space-1) var(--space-3);
   background: transparent;
   color: var(--color-brand);
   font-size: 0.875rem;
@@ -295,6 +302,38 @@ input {
   box-shadow: 0 0 0 3px var(--color-focus);
 }
 
+/* ---------- Interruptor de tema ---------- */
+
+.theme-toggle {
+  position: fixed;
+  top: max(var(--space-4), env(safe-area-inset-top));
+  right: max(var(--space-4), env(safe-area-inset-right));
+  z-index: 10;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-surface-edge);
+  border-radius: 50%;
+  background: var(--color-surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-thumb);
+  color: var(--color-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--duration-press) ease-out;
+}
+
+.theme-toggle:active {
+  transform: scale(0.92);
+}
+
+.theme-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--color-focus);
+}
+
 /* ---------- Accesibilidad ---------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -305,7 +344,8 @@ input {
     animation-duration: 1ms !important;
   }
 
-  .button:active:not(:disabled) {
+  .button:active:not(:disabled),
+  .theme-toggle:active {
     transform: none;
   }
 
@@ -313,6 +353,14 @@ input {
     animation: none;
     border-right-color: currentColor;
     opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .theme-toggle {
+    background: var(--color-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 

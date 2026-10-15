@@ -90,7 +90,7 @@ export function LoginPage({ onSubmit }: LoginPageProps) {
       <section className="auth__card" aria-labelledby="auth-title">
         <header className="auth__header">
           <div className="auth__logo" aria-hidden="true">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 21c-4.4 0-8-3.1-8-7.5C4 9.4 7 7 9.5 7c1.2 0 1.9.5 2.5.5s1.3-.5 2.5-.5C17 7 20 9.4 20 13.5 20 17.9 16.4 21 12 21Z" />
               <path d="M12 7.5c0-2 1-3.5 3-4.5" />
             </svg>
