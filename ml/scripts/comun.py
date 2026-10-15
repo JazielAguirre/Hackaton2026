@@ -1,6 +1,7 @@
 """Rutas y utilidades que comparten los scripts de entrenamiento."""
 
 import hashlib
+import json
 from pathlib import Path
 
 # Todas las rutas salen de la ubicación de este archivo, así los scripts
@@ -8,6 +9,8 @@ from pathlib import Path
 ML_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = ML_DIR / "data" / "raw"
 PROCESSED_DIR = ML_DIR / "data" / "processed"
+REVIEW_DIR = ML_DIR / "data" / "revision"
+CONFIG_DIR = ML_DIR / "config"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
@@ -24,3 +27,8 @@ def file_hash(path: Path) -> str:
         for block in iter(lambda: f.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def load_class_map(fruit: str) -> dict:
+    """Mapeo de clases de una fruta desde ml/config/mapeo_clases.json."""
+    return json.loads((CONFIG_DIR / "mapeo_clases.json").read_text())[fruit]
