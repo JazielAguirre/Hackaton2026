@@ -1,122 +1,81 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { AppHeader } from './components/layout/AppHeader'
+import { NAV_ITEMS, type NavId, type Usuario, type Vista } from './components/layout/navegacion'
+import { ThemeToggle } from './components/ui/ThemeToggle'
+import { useTheme } from './hooks/useTheme'
+import { HomePage } from './pages/HomePage'
+import { LoginPage, type AuthData } from './pages/LoginPage'
+import { PlaceholderPage } from './pages/PlaceholderPage'
+import type { LoteBitacora } from './utils/dominio'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const { theme, toggleTheme } = useTheme()
+  const [usuario, setUsuario] = useState<Usuario | null>(null)
+  const [vista, setVista] = useState<Vista>('inicio')
+  const [activo, setActivo] = useState<NavId>('inicio')
+
+  // TODO (backend): conectar con Supabase Auth y leer el perfil real (nombre_completo, rol, zona)
+  async function handleAuth(data: AuthData) {
+    const nombre = data.mode === 'registro' ? data.nombre : data.correo.split('@')[0]
+    setUsuario({ nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1), rol: 'productor', zona: 'Zona Centro' })
+  }
+
+  // TODO (backend): GET /lotes/{id}/reporte.pdf
+  function handleDescargarReporte(lote: LoteBitacora) {
+    console.info('Descargar reporte PDF del lote', lote.id)
+  }
+
+  function navegar(id: NavId) {
+    setActivo(id)
+    if (id === 'nuevo' || id === 'bitacora') {
+      setVista(id)
+      window.scrollTo({ top: 0 })
+      return
+    }
+    // Reportes y alertas son secciones de inicio: se muestra inicio y se baja a la sección
+    setVista('inicio')
+    requestAnimationFrame(() => {
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const destino = id === 'inicio' ? null : document.getElementById(id)
+      if (destino) destino.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' })
+      else window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' })
+    })
+  }
+
+  function cerrarSesion() {
+    setUsuario(null)
+    setVista('inicio')
+    setActivo('inicio')
+  }
+
+  if (!usuario) {
+    return (
+      <>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} floating />
+        <LoginPage onSubmit={handleAuth} />
+      </>
+    )
+  }
+
+  const item = NAV_ITEMS.find((navItem) => navItem.id === vista)
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      <AppHeader
+        usuario={usuario}
+        activo={activo}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onNavigate={navegar}
+        onLogout={cerrarSesion}
+      />
+      <main className="app-main">
+        {vista === 'inicio' || !item ? (
+          <HomePage nombre={usuario.nombre} onNuevoAnalisis={() => navegar('nuevo')} onDescargarReporte={handleDescargarReporte} />
+        ) : (
+          <PlaceholderPage titulo={item.label} icon={item.icon} onVolver={() => navegar('inicio')} />
+        )}
+      </main>
     </>
   )
 }
-
-export default App

@@ -1,0 +1,145 @@
+/* ==========================================================================
+   FruitScan · página de acceso (iniciar sesión / crear cuenta)
+   ========================================================================== */
+
+.auth {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  /* arriba deja espacio para el interruptor de tema */
+  padding: max(4rem, env(safe-area-inset-top)) var(--space-4) max(var(--space-2), env(safe-area-inset-bottom));
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Fondo estático con los colores de las frutas; le da algo que difuminar a la tarjeta */
+.auth::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  background:
+    radial-gradient(40% 35% at 20% 25%, color-mix(in srgb, var(--color-primary-500) 35%, transparent), transparent 70%),
+    radial-gradient(35% 30% at 80% 20%, color-mix(in srgb, var(--color-primary-300) 40%, transparent), transparent 70%),
+    radial-gradient(40% 35% at 70% 80%, color-mix(in srgb, var(--color-accent-500) 28%, transparent), transparent 70%),
+    radial-gradient(35% 30% at 15% 85%, color-mix(in srgb, var(--color-warning) 26%, transparent), transparent 70%);
+  filter: blur(40px);
+}
+
+.auth__card {
+  width: 100%;
+  max-width: 26rem;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-6);
+  background: var(--color-surface);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid var(--color-surface-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  animation: card-in 500ms var(--ease-out) both;
+}
+
+/* La tarjeta se "materializa": escala y desenfoque juntos, no solo opacidad */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(8px);
+  }
+}
+
+.auth__header {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.auth__logo {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.auth__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.auth__subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.auth__form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* Campo que aparece al cambiar a "Crear cuenta" */
+.auth__field-enter {
+  animation: field-in var(--duration-move) var(--ease-out) both;
+}
+
+@keyframes field-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+
+.auth__form-error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-error-text) 12%, transparent);
+  color: var(--color-error-text);
+  font-size: 0.875rem;
+}
+
+.auth__submit {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.auth__note {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* Pantallas bajas (celulares pequeños o en horizontal): quita lo prescindible */
+@media (max-height: 640px) {
+  .auth {
+    padding-top: max(var(--space-4), env(safe-area-inset-top));
+  }
+
+  .auth__subtitle {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .auth__card {
+    background: var(--color-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth__card {
+    filter: none;
+  }
+}
