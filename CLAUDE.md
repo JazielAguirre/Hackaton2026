@@ -32,6 +32,8 @@ Rutas de la API: `POST /lotes`, `POST /lotes/{id}/fotos`, `POST /lotes/{id}/anal
 - RLS en todas las tablas. Toda tabla o función nueva lleva sus políticas y permisos en la misma migración. En funciones, revoca EXECUTE de `public` y `anon`.
 - Nombres en español, snake_case, sin acentos ni ñ.
 - Después de cambiar el esquema, regenera `frontend/src/types/database.ts`.
+- Tablas: `frutas`, `clases`, `umbrales_grado`, `configuracion`, `fichas`, `zonas`, `perfiles`, `lotes`, `fotos`, `frutos`, `analisis_lote`, `sugerencias`. Vista `bitacora_lotes`. Funciones `cerrar_analisis_lote()` (solo service role) y `alertas_comunitarias()` (agrupa por `zona_id` y devuelve `zona_nombre`). Bucket privado `fotos-lotes` con ruta `{usuario_id}/{lote_id}/{foto_id}.jpg`. Los lotes usan `zona_id` de la tabla `zonas`, no texto libre.
+- Login con Supabase Auth (correo y contraseña). Al registrarse, el trigger `crear_perfil_usuario()` crea el perfil con `nombre_completo`, `organizacion` y `zona_id` tomados de `options.data` en `signUp`. El rol nunca sale de la metadata y solo lo cambia la service role. El perfil se edita con `.update()`, no con `upsert`.
 
 ## Dominio (no cambiar sin acuerdo del equipo)
 Clases por fruta (código → destino por defecto):
