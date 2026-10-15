@@ -347,7 +347,7 @@ export type Database = {
           parcela: string | null
           updated_at: string
           usuario_id: string
-          zona: string | null
+          zona_id: number | null
         }
         Insert: {
           created_at?: string
@@ -362,7 +362,7 @@ export type Database = {
           parcela?: string | null
           updated_at?: string
           usuario_id?: string
-          zona?: string | null
+          zona_id?: number | null
         }
         Update: {
           created_at?: string
@@ -377,7 +377,7 @@ export type Database = {
           parcela?: string | null
           updated_at?: string
           usuario_id?: string
-          zona?: string | null
+          zona_id?: number | null
         }
         Relationships: [
           {
@@ -385,6 +385,54 @@ export type Database = {
             columns: ["fruta_principal"]
             isOneToOne: false
             referencedRelation: "frutas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotes_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "zonas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      perfiles: {
+        Row: {
+          created_at: string
+          id: string
+          nombre_completo: string | null
+          organizacion: string | null
+          rol: Database["public"]["Enums"]["rol_usuario"]
+          telefono: string | null
+          updated_at: string
+          zona_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          nombre_completo?: string | null
+          organizacion?: string | null
+          rol?: Database["public"]["Enums"]["rol_usuario"]
+          telefono?: string | null
+          updated_at?: string
+          zona_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nombre_completo?: string | null
+          organizacion?: string | null
+          rol?: Database["public"]["Enums"]["rol_usuario"]
+          telefono?: string | null
+          updated_at?: string
+          zona_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "perfiles_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "zonas"
             referencedColumns: ["id"]
           },
         ]
@@ -479,6 +527,36 @@ export type Database = {
         }
         Relationships: []
       }
+      zonas: {
+        Row: {
+          activa: boolean
+          estado: string | null
+          id: number
+          latitud: number | null
+          longitud: number | null
+          municipio: string | null
+          nombre: string
+        }
+        Insert: {
+          activa?: boolean
+          estado?: string | null
+          id?: number
+          latitud?: number | null
+          longitud?: number | null
+          municipio?: string | null
+          nombre: string
+        }
+        Update: {
+          activa?: boolean
+          estado?: string | null
+          id?: number
+          latitud?: number | null
+          longitud?: number | null
+          municipio?: string | null
+          nombre?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       bitacora_lotes: {
@@ -508,7 +586,8 @@ export type Database = {
           total_frutos: number | null
           updated_at: string | null
           usuario_id: string | null
-          zona: string | null
+          zona_id: number | null
+          zona_nombre: string | null
         }
         Relationships: [
           {
@@ -516,6 +595,13 @@ export type Database = {
             columns: ["fruta_principal"]
             isOneToOne: false
             referencedRelation: "frutas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotes_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "zonas"
             referencedColumns: ["id"]
           },
         ]
@@ -529,7 +615,8 @@ export type Database = {
           fruta_id: string
           lotes_afectados: number
           ultimo_reporte: string
-          zona: string
+          zona_id: number
+          zona_nombre: string
         }[]
       }
       cerrar_analisis_lote: {
@@ -568,6 +655,7 @@ export type Database = {
       estado_lote: "borrador" | "analizando" | "analizado" | "error"
       grado_lote: "A" | "B" | "C" | "rechazo"
       origen_sugerencia: "plantilla" | "llm"
+      rol_usuario: "productor" | "acopio" | "tecnico"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -705,6 +793,7 @@ export const Constants = {
       estado_lote: ["borrador", "analizando", "analizado", "error"],
       grado_lote: ["A", "B", "C", "rechazo"],
       origen_sugerencia: ["plantilla", "llm"],
+      rol_usuario: ["productor", "acopio", "tecnico"],
     },
   },
 } as const
