@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 # Todas las rutas salen de la ubicación de este archivo, así los scripts
@@ -11,6 +12,9 @@ RAW_DIR = ML_DIR / "data" / "raw"
 PROCESSED_DIR = ML_DIR / "data" / "processed"
 REVIEW_DIR = ML_DIR / "data" / "revision"
 CONFIG_DIR = ML_DIR / "config"
+MODELS_DIR = ML_DIR / "modelos"
+BASE_WEIGHTS_DIR = MODELS_DIR / "base"  # pesos preentrenados que descarga Ultralytics
+RUNS_DIR = ML_DIR / "runs"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
@@ -43,3 +47,23 @@ def save_cleaning_summary(dataset: str, data: dict) -> Path:
     path.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
     return path
 
+
+def default_workers() -> int:
+    """Procesos para cargar imágenes: un tercio de los hilos del CPU (el resto entrena), entre 2 y 8."""
+    return max(2, min(8, (os.cpu_count() or 4) // 3))
+
+
+def load_base_model(preferred: str, fallback: str):
+    """Carga el modelo preentrenado; si no se puede descargar, usa el de respaldo.
+
+    Acepta un nombre de Ultralytics (se descarga a ml/modelos/base/) o la ruta a un .pt propio.
+    """
+    from ultralytics import YOLO  # import aquí: tarda y no todos los scripts lo necesitan
+
+    for name in (preferred, fallback):
+        path = Path(name) if Path(name).exists() else BASE_WEIGHTS_DIR / name
+        try:
+            return YOLO(path), name
+        except Exception as e:
+            print(f"No se pudo cargar {name}: {e}")
+    raise SystemExit(f"No se pudo cargar ni {preferred} ni {fallback}. Revisa la conexión a internet.")
