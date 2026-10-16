@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AppHeader } from './components/layout/AppHeader'
 import type { NavId } from './components/layout/navegacion'
+import type { NuevaZona } from './components/zonas/RegistrarZona'
 import { ThemeToggle } from './components/ui/ThemeToggle'
 import { usePerfil } from './hooks/usePerfil'
 import { navegar, useRuta } from './hooks/useRuta'
@@ -12,21 +13,29 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage, type AuthData } from './pages/LoginPage'
 import { NuevoAnalisisPage, type NuevoLote } from './pages/NuevoAnalisisPage'
 import { ReportesPage } from './pages/ReportesPage'
-import { detalleLoteEjemplo, lotesEjemplo, lotesReporteEjemplo } from './services/datosEjemplo'
-import type { LoteBitacora } from './utils/dominio'
+import { ZonaDetallePage } from './pages/ZonaDetallePage'
+import { ZonasPage } from './pages/ZonasPage'
+import { alertasEjemplo, detalleLoteEjemplo, lotesEjemplo, lotesReporteEjemplo, zonasEjemplo } from './services/datosEjemplo'
+import type { LoteBitacora, Zona } from './utils/dominio'
+import { resumirZona } from './utils/zonas'
 
 // TODO (backend): parcelas reales del productor (lotes.parcela sin repetir); por ahora salen de los datos de ejemplo
 const PARCELAS = [...new Set(lotesEjemplo.map((lote) => lote.parcela).filter((p): p is string => Boolean(p)))]
 
 const RUTA_DETALLE = /^\/reportes\/lote\/([^/]+)\/?$/
+const RUTA_ZONA = /^\/zonas\/(\d+)\/?$/
 
 export default function App() {
   const { theme, toggleTheme } = useTheme()
   const sesion = useSesion()
   const usuario = usePerfil(sesion)
   const { path } = useRuta()
-  // Alertas es una sección de inicio: se recuerda para marcarla en el menú
-  const [seccionInicio, setSeccionInicio] = useState<'inicio' | 'alertas'>('inicio')
+  // TODO (backend): leer y crear en la tabla zonas. Por ahora las nuevas viven solo en esta sesión.
+  const [zonas, setZonas] = useState<Zona[]>(zonasEjemplo)
+  const lotesConZona = useMemo(
+    () => lotesReporteEjemplo.map((l) => ({ ...l, zona_nombre: zonas.find((z) => z.id === l.zona_id)?.nombre ?? l.zona_nombre })),
+    [zonas],
+  )
 
   // Al terminar bien, useSesion recibe la sesión nueva y se muestra la página principal.
   async function handleAuth(data: AuthData) {
@@ -46,24 +55,16 @@ export default function App() {
   }
 
   function navegarMenu(id: NavId) {
-    if (id === 'nuevo' || id === 'reportes') {
-      navegar(`/${id}`)
-      return
-    }
-    // Inicio y alertas viven en la página principal: se muestra y se baja a la sección
-    setSeccionInicio(id)
-    if (path !== '/') navegar('/')
-    requestAnimationFrame(() => {
-      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const destino = id === 'inicio' ? null : document.getElementById(id)
-      if (destino) destino.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' })
-      else window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' })
-    })
+    navegar(id === 'inicio' ? '/' : `/${id}`)
+  }
+
+  // TODO (backend): insert en zonas (la BD asigna el id). Aquí se simula con el siguiente número.
+  function registrarZona(nueva: NuevaZona) {
+    setZonas((prev) => [...prev, { ...nueva, id: Math.max(0, ...prev.map((z) => z.id)) + 1, activa: true }])
   }
 
   async function salir() {
     navegar('/')
-    setSeccionInicio('inicio')
     try {
       await cerrarSesion() // useSesion pasa a null y vuelve el login
     } catch (error) {
@@ -85,7 +86,8 @@ export default function App() {
 
   // La URL decide la pantalla, así un enlace a un lote se puede compartir y recargar
   const detalle = RUTA_DETALLE.exec(path)
-  const activo: NavId = path === '/nuevo' ? 'nuevo' : path.startsWith('/reportes') ? 'reportes' : seccionInicio
+  const zonaRuta = RUTA_ZONA.exec(path)
+  const activo: NavId = path === '/nuevo' ? 'nuevo' : path.startsWith('/reportes') ? 'reportes' : path.startsWith('/zonas') ? 'zonas' : 'inicio'
 
   let pagina
   if (detalle) {
@@ -94,7 +96,13 @@ export default function App() {
     pagina = <DetalleLotePage lote={lote} esEjemplo onDescargarPdf={handleDescargarReporte} />
   } else if (path === '/reportes' || path === '/reportes/') {
     // TODO (backend): vista bitacora_lotes + conteo de frutos por destino
-    pagina = <ReportesPage lotes={lotesReporteEjemplo} esEjemplo onDescargarPdf={handleDescargarReporte} />
+    pagina = <ReportesPage lotes={lotesConZona} esEjemplo onDescargarPdf={handleDescargarReporte} />
+  } else if (zonaRuta) {
+    const zona = zonas.find((z) => z.id === Number(zonaRuta[1]))
+    pagina = <ZonaDetallePage resumen={zona ? resumirZona(zona, lotesConZona, alertasEjemplo) : null} esEjemplo />
+  } else if (path === '/zonas' || path === '/zonas/') {
+    // TODO (backend): tabla zonas, vista bitacora_lotes y función alertas_comunitarias
+    pagina = <ZonasPage zonas={zonas} lotes={lotesConZona} alertas={alertasEjemplo} esEjemplo onRegistrar={registrarZona} />
   } else if (path === '/nuevo') {
     pagina = <NuevoAnalisisPage parcelas={PARCELAS} onSubmit={handleNuevoLote} onCancelar={() => navegar('/')} />
   } else {

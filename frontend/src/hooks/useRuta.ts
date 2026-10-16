@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom'
  * Enrutador mínimo con la History API (sin dependencias).
  * - La URL es la fuente de verdad: pantalla, filtros y vista se pueden compartir y recargar.
  * - Cada entrada del historial guarda su scroll para volver al mismo punto con "atrás".
- * - Al abrir el detalle de un lote se usa View Transitions: entra por la derecha
+ * - Al abrir el detalle de un lote o de una zona se usa View Transitions: entra por la derecha
  *   y sale por el mismo lado al regresar (ver ::view-transition en reportes.css).
  */
 
@@ -14,7 +14,8 @@ type Estado = { scrollY?: number; desdeLista?: boolean }
 const oyentes = new Set<() => void>()
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
 
-const esDetalle = (ruta: string) => ruta.startsWith('/reportes/lote/')
+// Detalle de un lote o de una zona: entra por la derecha y sale por el mismo lado
+const esDetalle = (ruta: string) => /^\/(reportes\/lote|zonas)\/[^/]+/.test(ruta)
 
 function conTransicion(cambiar: () => void, rutaAnterior: string) {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches

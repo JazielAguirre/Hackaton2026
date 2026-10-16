@@ -365,18 +365,26 @@
 
 [data-grado='A'] {
   --g: var(--grado-a);
+  --g-texto: var(--grado-a-texto);
+  --g-tinta: var(--grado-a-tinta);
 }
 
 [data-grado='B'] {
   --g: var(--grado-b);
+  --g-texto: var(--grado-b-texto);
+  --g-tinta: var(--grado-b-tinta);
 }
 
 [data-grado='C'] {
   --g: var(--grado-c);
+  --g-texto: var(--grado-c-texto);
+  --g-tinta: var(--grado-c-tinta);
 }
 
 [data-grado='rechazo'] {
   --g: var(--grado-rechazo);
+  --g-texto: var(--grado-rechazo-texto);
+  --g-tinta: var(--grado-rechazo-tinta);
 }
 
 .grado-insignia__circulo {
@@ -389,7 +397,7 @@
   /* brillo arriba y sombra del mismo tono: se lee como una pieza, no como un punto plano */
   background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 60%);
   box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--g) 70%, transparent);
-  color: #fff;
+  color: var(--g-texto, #fff);
   font-size: 0.9375rem;
   line-height: 1;
 }
@@ -493,11 +501,12 @@
    Elegido: relleno sólido, letra blanca y un anillo del mismo color separado por el fondo. */
 .chip--grado {
   --c: var(--g);
+  --c-texto: var(--g-texto);
   justify-content: center;
   width: 2.75rem;
   padding: 0;
   border-width: 1.5px;
-  color: var(--c);
+  color: var(--g-tinta);
   font-size: 1.0625rem;
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -510,7 +519,7 @@
 }
 
 .chip--grado[aria-pressed='true'] {
-  color: #fff;
+  color: var(--c-texto);
   transform: scale(1.06);
   box-shadow:
     0 0 0 3px var(--color-surface-solid),
@@ -532,9 +541,6 @@
   gap: var(--space-3);
 }
 
-:root[data-theme='dark'] .chip--grado:not([aria-pressed='true']) {
-  color: color-mix(in srgb, var(--c) 45%, white);
-}
 
 /* El amarillo del mango es claro: su borde necesita más presencia sobre el fondo */
 .chip--fruta[data-fruta='mango']:not([aria-pressed='true']) {
