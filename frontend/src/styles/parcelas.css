@@ -454,6 +454,12 @@
   gap: var(--space-3);
 }
 
+/* Sin esto, el campo de la derecha se sale de la hoja en pantallas angostas */
+.hoja__fila > .field {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .hoja__acciones {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
