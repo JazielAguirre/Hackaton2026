@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'plain'
+  variant?: 'primary' | 'plain' | 'secundario'
   loading?: boolean
 }
 

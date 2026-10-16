@@ -132,7 +132,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .auth__card {
-    background: var(--color-bg);
+    background: var(--color-surface-solid);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

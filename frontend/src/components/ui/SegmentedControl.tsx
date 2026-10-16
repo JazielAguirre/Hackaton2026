@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
+import { Icon, type IconName } from './Icon'
 
-type Option<T extends string> = { value: T; label: string }
+type Option<T extends string> = { value: T; label: string; icon?: IconName }
 
 type SegmentedControlProps<T extends string> = {
   label: string
@@ -27,6 +28,7 @@ export function SegmentedControl<T extends string>({ label, options, value, onCh
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
         >
+          {option.icon && <Icon name={option.icon} size={16} />}
           {option.label}
         </button>
       ))}

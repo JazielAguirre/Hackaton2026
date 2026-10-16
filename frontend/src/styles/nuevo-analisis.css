@@ -282,7 +282,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .nuevo__bar {
-    background: var(--color-bg);
+    background: var(--color-surface-solid);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

@@ -18,7 +18,7 @@ export function DestinoChart({ conteo }: DestinoChartProps) {
             className="destino-chart__segment"
             data-destino={destino.codigo}
             style={{ flexGrow: conteo[destino.codigo] }}
-            title={`${destino.nombre}: ${conteo[destino.codigo]} frutos (${Math.round(pct(conteo[destino.codigo]))} %)`}
+            title={`${destino.nombre}: ${conteo[destino.codigo]} frutos (${Math.round(pct(conteo[destino.codigo]))}%)`}
           />
         ))}
       </div>
@@ -29,7 +29,7 @@ export function DestinoChart({ conteo }: DestinoChartProps) {
             <span className="destino-chart__swatch" data-destino={destino.codigo} aria-hidden="true" />
             <span className="destino-chart__name">{destino.nombre}</span>
             <span className="destino-chart__count">{formatNumero(conteo[destino.codigo])}</span>
-            <span className="destino-chart__pct">{Math.round(pct(conteo[destino.codigo]))} %</span>
+            <span className="destino-chart__pct">{Math.round(pct(conteo[destino.codigo]))}%</span>
           </li>
         ))}
       </ul>

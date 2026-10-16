@@ -39,6 +39,18 @@
   text-align: center;
 }
 
+/* Encabezado de tarjeta con una acción a la derecha ("Ver todos") */
+.card__header--accion {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.card__header--accion .button {
+  margin: calc(var(--space-2) * -1) calc(var(--space-3) * -1) 0 0;
+}
+
 /* ---------- Indicadores ---------- */
 
 .stats {
@@ -273,19 +285,19 @@
 }
 
 .grado-badge[data-grado='A'] {
-  --badge-color: var(--color-success);
+  --badge-color: var(--grado-a);
 }
 
 .grado-badge[data-grado='B'] {
-  --badge-color: var(--color-primary-500);
+  --badge-color: var(--grado-b);
 }
 
 .grado-badge[data-grado='C'] {
-  --badge-color: var(--color-warning);
+  --badge-color: var(--grado-c);
 }
 
 .grado-badge[data-grado='rechazo'] {
-  --badge-color: var(--color-error);
+  --badge-color: var(--grado-rechazo);
 }
 
 .grado-badge--pendiente {
@@ -369,7 +381,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .stat-tile {
-    background: var(--color-bg);
+    background: var(--color-surface-solid);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

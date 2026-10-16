@@ -1,8 +1,8 @@
 import type { IconName } from '../ui/Icon'
 
-/** Pantallas propias de la app. Reportes y alertas son secciones de inicio. */
-export type Vista = 'inicio' | 'nuevo' | 'bitacora'
-export type NavId = Vista | 'reportes' | 'alertas'
+/** Pantallas propias de la app. Reportes es también la bitácora; alertas es una sección de inicio. */
+export type Vista = 'inicio' | 'nuevo' | 'reportes'
+export type NavId = Vista | 'alertas'
 
 export type Usuario = {
   nombre: string
@@ -13,8 +13,7 @@ export type Usuario = {
 export const NAV_ITEMS: readonly { id: NavId; label: string; icon: IconName }[] = [
   { id: 'inicio', label: 'Inicio', icon: 'inicio' },
   { id: 'nuevo', label: 'Nuevo análisis', icon: 'camara' },
-  { id: 'bitacora', label: 'Bitácora', icon: 'bitacora' },
-  { id: 'reportes', label: 'Reportes', icon: 'reporte' },
+  { id: 'reportes', label: 'Reportes y bitácora', icon: 'reporte' },
   { id: 'alertas', label: 'Alertas de zona', icon: 'alerta' },
 ]
 
