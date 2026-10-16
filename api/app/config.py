@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     supabase_anon_key: str
     supabase_service_role_key: str
     # Separados por coma en CORS_ORIGINS. Por defecto, el servidor de Vite con ambos nombres.
+    # Servicio de inferencia (inferencia/ en docker-compose.yml).
+    inferencia_url: str = "http://127.0.0.1:8001"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     @property

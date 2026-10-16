@@ -41,14 +41,22 @@ class FakeSupabase:
         self.storage = FakeStorage(self.usuario_id)
         # Tablas donde un insert falla a propósito, para probar el manejo de errores.
         self.fallar_insert_en: set[str] = set()
+        # Funciones rpc que fallan a propósito, y las que se llamaron: (nombre, parámetros).
+        self.fallar_rpc: set[str] = set()
+        self.rpc_llamadas: list[tuple[str, dict]] = []
+        # Lo que se mandó a insertar, tal cual (antes de los valores por defecto de la base).
+        self.inserciones: list[tuple[str, list[dict]]] = []
 
     def table(self, nombre: str) -> "FakeQuery":
         return FakeQuery(self, nombre)
 
+    def rpc(self, nombre: str, parametros: dict) -> "FakeRpc":
+        return FakeRpc(self, nombre, parametros)
+
     def visible(self, tabla: str, fila: dict) -> bool:
         if self.usuario_id is None:
             return True
-        if tabla == "lotes":
+        if tabla in ("lotes", "bitacora_lotes", "parcelas"):
             return str(fila["usuario_id"]) == self.usuario_id
         if tabla == "perfiles":
             return str(fila["id"]) == self.usuario_id
@@ -62,13 +70,16 @@ class FakeSupabase:
     def completar(self, tabla: str, fila: dict) -> dict:
         """Pone los valores por defecto que pondría la base de datos."""
         ahora = datetime.now(timezone.utc).isoformat()
-        fila.setdefault("id", str(uuid4()))
+        if tabla == "zonas":
+            fila.setdefault("id", max([z["id"] for z in self.tablas.get("zonas", [])], default=0) + 1)
+        else:
+            fila.setdefault("id", str(uuid4()))
         fila.setdefault("created_at", ahora)
         # Como en la base real, select("*") trae todas las columnas (null si no hay valor).
         defaults: dict[str, dict[str, Any]] = {
             "lotes": {
                 "usuario_id": self.usuario_id, "estado": "borrador", "updated_at": ahora,
-                "fruta_principal": None, "parcela": None, "zona_id": None, "latitud": None,
+                "fruta_principal": None, "parcela": None, "parcela_id": None, "zona_id": None, "latitud": None,
                 "longitud": None, "fecha_cosecha": None, "destino_buscado": None,
             },
             "fotos": {
@@ -76,6 +87,9 @@ class FakeSupabase:
                 "nitidez": None, "brillo": None,
             },
             "sugerencias": {"ficha_id": None},
+            # La base real asigna el destino con un trigger; aquí solo se simula el valor por defecto.
+            "frutos": {"destino": "revision_manual", "requiere_revision": True},
+            "zonas": {"municipio": None, "estado": None, "latitud": None, "longitud": None, "activa": True},
         }
         for campo, valor in defaults.get(tabla, {}).items():
             fila.setdefault(campo, valor)
@@ -91,8 +105,11 @@ class FakeQuery:
         self.filtros: list[Callable[[dict], bool]] = []
         self.orden: tuple[str, bool] | None = None
         self.limite: int | None = None
+        self.rango: tuple[int, int] | None = None
+        self.contar = False
 
-    def select(self, *_columnas: str, **_opciones: Any) -> "FakeQuery":
+    def select(self, *_columnas: str, count: str | None = None) -> "FakeQuery":
+        self.contar = count == "exact"
         return self
 
     def insert(self, datos: dict | list[dict]) -> "FakeQuery":
@@ -124,13 +141,18 @@ class FakeQuery:
         self.limite = n
         return self
 
+    def range(self, desde: int, hasta: int) -> "FakeQuery":
+        self.rango = (desde, hasta)
+        return self
+
     def execute(self) -> SimpleNamespace:
         filas = self.bd.tablas.setdefault(self.tabla, [])
 
         if self.operacion == "insert":
             if self.tabla in self.bd.fallar_insert_en:
                 raise APIError({"code": "XX000", "message": "fallo simulado"})
-            nuevas =self.datos if isinstance(self.datos, list) else [self.datos]
+            nuevas = self.datos if isinstance(self.datos, list) else [self.datos]
+            self.bd.inserciones.append((self.tabla, copy.deepcopy(nuevas)))
             nuevas = [self.bd.completar(self.tabla, dict(fila)) for fila in nuevas]
             if not all(self.bd.visible(self.tabla, fila) for fila in nuevas):
                 raise APIError({"code": "42501", "message": "new row violates row-level security policy"})
@@ -148,9 +170,40 @@ class FakeQuery:
         if self.orden:
             columna, desc = self.orden
             seleccion.sort(key=lambda f: str(f.get(columna)), reverse=desc)
+        total = len(seleccion)
+        if self.rango is not None:
+            seleccion = seleccion[self.rango[0] : self.rango[1] + 1]
         if self.limite is not None:
             seleccion = seleccion[: self.limite]
-        return SimpleNamespace(data=copy.deepcopy(seleccion))
+        return SimpleNamespace(data=copy.deepcopy(seleccion), count=total if self.contar else None)
+
+
+class FakeRpc:
+    """Funciones de la base. Solo se simula lo mínimo de cerrar_analisis_lote: la lógica real
+    (grado, porcentajes) vive en la base de datos y no se repite aquí."""
+
+    def __init__(self, bd: FakeSupabase, nombre: str, parametros: dict) -> None:
+        self.bd, self.nombre, self.parametros = bd, nombre, parametros
+
+    def execute(self) -> SimpleNamespace:
+        self.bd.rpc_llamadas.append((self.nombre, self.parametros))
+        if self.nombre in self.bd.fallar_rpc:
+            raise APIError({"code": "XX000", "message": "fallo simulado"})
+        if self.nombre != "cerrar_analisis_lote":
+            raise AssertionError(f"rpc no simulada: {self.nombre}")
+        lote_id = self.parametros["p_lote_id"]
+        frutos = [f for f in self.bd.tablas.get("frutos", []) if f["lote_id"] == lote_id]
+        analisis = self.bd.completar("analisis_lote", {
+            "lote_id": lote_id, "total_frutos": len(frutos), "frutos_sanos": 0, "frutos_separar": 0,
+            "frutos_revision": len(frutos), "pct_sanos": None, "pct_separar": None, "conteo_por_clase": {},
+            "grado": None, "destino_lote": None, "muestra_pequena": True,
+            "modelo_version": self.parametros["p_modelo_version"],
+        })
+        self.bd.tablas.setdefault("analisis_lote", []).append(analisis)
+        for lote in self.bd.tablas["lotes"]:
+            if lote["id"] == lote_id:
+                lote["estado"] = "analizado"
+        return SimpleNamespace(data=copy.deepcopy(analisis))
 
 
 class FakeStorage:
@@ -184,6 +237,11 @@ class FakeBucket:
             raise StorageException("The resource already exists")
         self.storage.objetos[ruta] = (contenido, opciones or {})
         self.storage.subidas += 1
+
+    def download(self, ruta: str) -> bytes:
+        if ruta not in self.storage.objetos or not self._permitida(ruta):
+            raise StorageException("Object not found")
+        return self.storage.objetos[ruta][0]
 
     def remove(self, rutas: list[str]) -> list[dict]:
         borradas = [r for r in rutas if r in self.storage.objetos and self._permitida(r)]
