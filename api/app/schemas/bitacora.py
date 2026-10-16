@@ -15,6 +15,7 @@ class LoteBitacora(BaseModel):
     nombre: str
     fruta_principal: str | None
     parcela: str | None
+    parcela_id: UUID | None = Field(None, description="Parcela del lote; null en los lotes viejos")
     zona_id: int | None
     zona_nombre: str | None
     latitud: float | None

@@ -84,3 +84,34 @@ def test_sin_sesion_responde_401():
     from app.main import app
 
     assert TestClient(app).get("/bitacora").status_code == 401
+
+
+def test_filtra_por_parcela_y_devuelve_la_parcela_de_cada_lote(cliente, bd):
+    parcela = agregar(bd, "parcelas", nombre="Norte", usuario_id=str(USUARIO.id))["id"]
+    otra = agregar(bd, "parcelas", nombre="Sur", usuario_id=str(USUARIO.id))["id"]
+    for nombre, dia, parcela_id in (("En norte 1", 3, parcela), ("En sur", 2, otra), ("Viejo", 1, None), ("En norte 2", 4, parcela)):
+        lote = agregar(bd, "lotes", nombre=nombre, usuario_id=str(USUARIO.id), parcela_id=parcela_id)
+        # La vista y el lote comparten id.
+        _lote(bd, nombre, f"2026-10-0{dia}T10:00:00+00:00", id=lote["id"])
+
+    todos = cliente.get("/bitacora").json()["lotes"]
+    assert {l["nombre"]: l["parcela_id"] for l in todos} == {
+        "En norte 1": parcela, "En sur": otra, "Viejo": None, "En norte 2": parcela,
+    }
+
+    filtrado = cliente.get("/bitacora", params={"parcela_id": parcela}).json()
+    assert [l["nombre"] for l in filtrado["lotes"]] == ["En norte 2", "En norte 1"]
+    assert filtrado["total"] == 2
+
+
+def test_parcela_sin_lotes_devuelve_lista_vacia(cliente, bd):
+    _lote(bd, "Lote", "2026-10-16T10:00:00+00:00")
+
+    cuerpo = cliente.get("/bitacora", params={"parcela_id": "33333333-3333-3333-3333-333333333333"}).json()
+
+    assert cuerpo["total"] == 0
+    assert cuerpo["lotes"] == []
+
+
+def test_parcela_id_invalido_responde_422(cliente):
+    assert cliente.get("/bitacora", params={"parcela_id": "no-es-uuid"}).status_code == 422

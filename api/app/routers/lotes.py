@@ -12,6 +12,7 @@ from app.services.storage import BUCKET
 router = APIRouter(prefix="/lotes", tags=["lotes"])
 
 FRUTA_NO_SOPORTADA = "Fruta no soportada: solo se analizan mango, jitomate y fresa"
+FALTA_PARCELA = "Elige la parcela del lote"
 URL_EXPIRA_SEGUNDOS = 3600
 
 
@@ -20,9 +21,10 @@ def crear_lote(datos: LoteCrear, usuario: UsuarioActual, bd: ClienteUsuario) -> 
     if datos.fruta_principal is not None and not _existe_activa(bd, "frutas", datos.fruta_principal):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, FRUTA_NO_SOPORTADA)
 
-    parcela = None
-    if datos.parcela_id is not None:
-        parcela = _parcela_activa(bd, datos.parcela_id)
+    # Cada lote pertenece a una parcela. La base la deja opcional por los lotes viejos.
+    if datos.parcela_id is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, FALTA_PARCELA)
+    parcela = _parcela_activa(bd, datos.parcela_id)
 
     zona_id = datos.zona_id
     if zona_id is None:
@@ -33,7 +35,7 @@ def crear_lote(datos: LoteCrear, usuario: UsuarioActual, bd: ClienteUsuario) -> 
 
     # usuario_id y estado los pone la base de datos (default auth.uid() y 'borrador').
     fila = datos.model_dump(mode="json") | {"zona_id": zona_id}
-    if parcela and datos.parcela is None:
+    if datos.parcela is None:
         fila["parcela"] = parcela["nombre"]
     return bd.table("lotes").insert(fila).execute().data[0]
 

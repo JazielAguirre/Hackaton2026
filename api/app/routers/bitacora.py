@@ -1,5 +1,6 @@
 from collections import Counter
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import APIRouter, Query
 from supabase import Client
@@ -21,6 +22,7 @@ def bitacora(
     fruta: Annotated[str | None, Query(description="Código de la fruta, p. ej. mango")] = None,
     grado: Annotated[Grado | None, Query()] = None,
     zona_id: Annotated[int | None, Query(gt=0)] = None,
+    parcela_id: Annotated[UUID | None, Query(description="Solo los lotes de esta parcela")] = None,
     limite: Annotated[int, Query(ge=1, le=100)] = 20,
     desplazamiento: Annotated[int, Query(ge=0)] = 0,
 ) -> dict[str, Any]:
@@ -32,18 +34,41 @@ def bitacora(
         consulta = consulta.eq("grado", grado)
     if zona_id:
         consulta = consulta.eq("zona_id", zona_id)
+    if parcela_id:
+        # La vista no trae parcela_id: se buscan los lotes de la parcela y se filtra la vista por sus ids.
+        ids = _lotes_de_parcela(bd, parcela_id)
+        if not ids:
+            return {"total": 0, "limite": limite, "desplazamiento": desplazamiento, "lotes": []}
+        consulta = consulta.in_("id", ids)
     respuesta = (
         consulta.order("created_at", desc=True).range(desplazamiento, desplazamiento + limite - 1).execute()
     )
 
     lotes = respuesta.data
-    por_destino = _frutos_por_destino(bd, [lote["id"] for lote in lotes])
+    ids_pagina = [lote["id"] for lote in lotes]
+    parcelas = _parcela_de_lotes(bd, ids_pagina)
+    por_destino = _frutos_por_destino(bd, ids_pagina)
     return {
         "total": respuesta.count or 0,
         "limite": limite,
         "desplazamiento": desplazamiento,
-        "lotes": [lote | {"frutos_por_destino": por_destino.get(lote["id"])} for lote in lotes],
+        "lotes": [
+            lote | {"parcela_id": parcelas.get(lote["id"]), "frutos_por_destino": por_destino.get(lote["id"])}
+            for lote in lotes
+        ],
     }
+
+
+def _lotes_de_parcela(bd: Client, parcela_id: UUID) -> list[str]:
+    filas = bd.table("lotes").select("id").eq("parcela_id", str(parcela_id)).limit(FILAS_POR_CONSULTA).execute().data
+    return [fila["id"] for fila in filas]
+
+
+def _parcela_de_lotes(bd: Client, lote_ids: list[str]) -> dict[str, str | None]:
+    if not lote_ids:
+        return {}
+    filas = bd.table("lotes").select("id,parcela_id").in_("id", lote_ids).execute().data
+    return {fila["id"]: fila["parcela_id"] for fila in filas}
 
 
 def _frutos_por_destino(bd: Client, lote_ids: list[str]) -> dict[str, dict[str, int]]:

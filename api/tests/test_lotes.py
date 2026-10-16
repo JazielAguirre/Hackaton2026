@@ -1,13 +1,20 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from tests.conftest import OTRO_USUARIO_ID, USUARIO, agregar
 
-LOTE_MINIMO = {"nombre": "Lote norte"}
+NOMBRE_LOTE = {"nombre": "Lote norte"}
 
 
-def test_crea_lote_con_la_zona_del_perfil(cliente, bd):
-    respuesta = cliente.post("/lotes", json=LOTE_MINIMO)
+@pytest.fixture
+def lote_minimo(bd) -> dict:
+    """Lo mínimo para crear un lote: nombre y una parcela activa del usuario."""
+    return NOMBRE_LOTE | {"parcela_id": _parcela(bd)}
+
+
+def test_crea_lote_con_la_zona_del_perfil(cliente, bd, lote_minimo):
+    respuesta = cliente.post("/lotes", json=lote_minimo)
 
     assert respuesta.status_code == 201
     lote = respuesta.json()
@@ -18,10 +25,11 @@ def test_crea_lote_con_la_zona_del_perfil(cliente, bd):
     assert len(bd.tablas["lotes"]) == 1
 
 
-def test_crea_lote_completo_y_normaliza_la_fruta(cliente):
+def test_crea_lote_completo_y_normaliza_la_fruta(cliente, lote_minimo):
     respuesta = cliente.post(
         "/lotes",
         json={
+            "parcela_id": lote_minimo["parcela_id"],
             "nombre": "  Lote sur  ",
             "fruta_principal": " Mango ",
             "parcela": "Parcela 3",
@@ -41,46 +49,46 @@ def test_crea_lote_completo_y_normaliza_la_fruta(cliente):
     assert lote["destino_buscado"] == "exportacion"
 
 
-def test_fruta_no_soportada_responde_422(cliente, bd):
-    respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"fruta_principal": "platano"})
+def test_fruta_no_soportada_responde_422(cliente, bd, lote_minimo):
+    respuesta = cliente.post("/lotes", json=lote_minimo | {"fruta_principal": "platano"})
 
     assert respuesta.status_code == 422
     assert "Fruta no soportada" in respuesta.json()["detail"]
     assert bd.tablas.get("lotes", []) == []
 
 
-def test_fruta_inactiva_responde_422(cliente):
-    respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"fruta_principal": "pina"})
+def test_fruta_inactiva_responde_422(cliente, lote_minimo):
+    respuesta = cliente.post("/lotes", json=lote_minimo | {"fruta_principal": "pina"})
     assert respuesta.status_code == 422
 
 
-def test_zona_inactiva_o_inexistente_responde_422(cliente):
+def test_zona_inactiva_o_inexistente_responde_422(cliente, lote_minimo):
     for zona_id in (2, 99):
-        respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"zona_id": zona_id})
+        respuesta = cliente.post("/lotes", json=lote_minimo | {"zona_id": zona_id})
         assert respuesta.status_code == 422
         assert "zona" in respuesta.json()["detail"]
 
 
-def test_datos_invalidos_responden_422(cliente):
+def test_datos_invalidos_responden_422(cliente, lote_minimo):
     invalidos = [
-        {"nombre": "   "},
-        LOTE_MINIMO | {"latitud": 100},
-        LOTE_MINIMO | {"longitud": -200},
-        LOTE_MINIMO | {"destino_buscado": "luna"},
-        LOTE_MINIMO | {"fecha_cosecha": "ayer"},
+        lote_minimo | {"nombre": "   "},
+        lote_minimo | {"latitud": 100},
+        lote_minimo | {"longitud": -200},
+        lote_minimo | {"destino_buscado": "luna"},
+        lote_minimo | {"fecha_cosecha": "ayer"},
     ]
     for datos in invalidos:
         assert cliente.post("/lotes", json=datos).status_code == 422, datos
 
 
-def test_no_permite_elegir_dueno_ni_estado(cliente):
+def test_no_permite_elegir_dueno_ni_estado(cliente, lote_minimo):
     for extra in ({"usuario_id": "22222222-2222-2222-2222-222222222222"}, {"estado": "analizado"}):
-        assert cliente.post("/lotes", json=LOTE_MINIMO | extra).status_code == 422
+        assert cliente.post("/lotes", json=lote_minimo | extra).status_code == 422
 
 
-def test_sin_sesion_responde_401():
+def test_sin_sesion_responde_401(lote_minimo):
     app.dependency_overrides.clear()
-    assert TestClient(app).post("/lotes", json=LOTE_MINIMO).status_code == 401
+    assert TestClient(app).post("/lotes", json=lote_minimo).status_code == 401
 
 
 # ---------- GET /lotes/{id} ----------
@@ -165,7 +173,7 @@ def _parcela(bd, nombre="Parcela 3", zona_id=None, activa=True, usuario_id=USUAR
 def test_crea_lote_con_parcela_registrada(cliente, bd):
     parcela_id = _parcela(bd)
 
-    respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"parcela_id": parcela_id})
+    respuesta = cliente.post("/lotes", json=NOMBRE_LOTE | {"parcela_id": parcela_id})
 
     assert respuesta.status_code == 201
     lote = respuesta.json()
@@ -175,11 +183,19 @@ def test_crea_lote_con_parcela_registrada(cliente, bd):
     assert lote["zona_id"] == 1
 
 
+def test_sin_parcela_responde_422(cliente, bd):
+    respuesta = cliente.post("/lotes", json=NOMBRE_LOTE)
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["detail"] == "Elige la parcela del lote"
+    assert bd.tablas.get("lotes", []) == []
+
+
 def test_el_lote_usa_la_zona_de_su_parcela(cliente, bd):
     bd.tablas["zonas"].append({"id": 3, "nombre": "Costa", "activa": True})
     parcela_id = _parcela(bd, zona_id=3)
 
-    respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"parcela_id": parcela_id})
+    respuesta = cliente.post("/lotes", json=NOMBRE_LOTE | {"parcela_id": parcela_id})
 
     assert respuesta.json()["zona_id"] == 3
 
@@ -187,7 +203,7 @@ def test_el_lote_usa_la_zona_de_su_parcela(cliente, bd):
 def test_respeta_el_nombre_de_parcela_que_manda_el_cliente(cliente, bd):
     parcela_id = _parcela(bd)
 
-    respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"parcela_id": parcela_id, "parcela": "Otro nombre"})
+    respuesta = cliente.post("/lotes", json=NOMBRE_LOTE | {"parcela_id": parcela_id, "parcela": "Otro nombre"})
 
     assert respuesta.json()["parcela"] == "Otro nombre"
 
@@ -197,7 +213,7 @@ def test_parcela_ajena_inactiva_o_inexistente_responde_422(cliente, bd):
     inactiva = _parcela(bd, nombre="Vieja", activa=False)
 
     for parcela_id in (ajena, inactiva, "33333333-3333-3333-3333-333333333333"):
-        respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"parcela_id": parcela_id})
+        respuesta = cliente.post("/lotes", json=NOMBRE_LOTE | {"parcela_id": parcela_id})
         assert respuesta.status_code == 422
         assert "parcela" in respuesta.json()["detail"]
     assert bd.tablas.get("lotes", []) == []

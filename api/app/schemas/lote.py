@@ -23,7 +23,7 @@ class LoteCrear(BaseModel):
     nombre: TextoCorto
     fruta_principal: IdFruta | None = Field(None, examples=["mango"])
     parcela: TextoCorto | None = Field(None, description="Nombre libre; si se manda parcela_id y esto no, se usa el de la parcela")
-    parcela_id: UUID | None = Field(None, description="Parcela registrada del usuario (tabla parcelas)")
+    parcela_id: UUID | None = Field(None, description="Obligatoria: parcela activa del usuario (tabla parcelas); sin ella responde 422")
     zona_id: int | None = Field(None, gt=0, description="Si no se manda, se usa la de la parcela o, si no, la del perfil")
     latitud: float | None = Field(None, ge=-90, le=90)
     longitud: float | None = Field(None, ge=-180, le=180)
