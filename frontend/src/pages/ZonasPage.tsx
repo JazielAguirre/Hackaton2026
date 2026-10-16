@@ -17,7 +17,7 @@ type ZonasPageProps = {
   lotes: LoteReporte[]
   alertas: AlertaComunitaria[]
   esEjemplo?: boolean
-  onRegistrar: (zona: NuevaZona) => void
+  onRegistrar: (zona: NuevaZona) => void | Promise<void>
 }
 
 export function ZonasPage({ zonas, lotes, alertas, esEjemplo = false, onRegistrar }: ZonasPageProps) {

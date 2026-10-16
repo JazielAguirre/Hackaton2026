@@ -5,20 +5,23 @@ import { ReporteLotes } from '../components/dashboard/ReporteLotes'
 import { StatTile } from '../components/dashboard/StatTile'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
-import { alertasEjemplo, frutosPorDestinoEjemplo, lotesEjemplo } from '../services/datosEjemplo'
-import { formatNumero, GRADOS, type Grado, type LoteBitacora } from '../utils/dominio'
+import { DESTINOS, formatNumero, GRADOS, type AlertaComunitaria, type Destino, type Grado, type LoteBitacora, type LoteReporte } from '../utils/dominio'
 import '../styles/home.css'
 
 type HomePageProps = {
   nombre: string
+  lotes: LoteReporte[]
+  /** Alertas que se muestran (las de la zona del usuario). */
+  alertas: AlertaComunitaria[]
+  esEjemplo?: boolean
   onNuevoAnalisis: () => void
   onVerReportes: () => void
   onDescargarReporte: (lote: LoteBitacora) => void
 }
 
-export function HomePage({ nombre, onNuevoAnalisis, onVerReportes, onDescargarReporte }: HomePageProps) {
-  const analizados = lotesEjemplo.filter((lote) => lote.estado === 'analizado')
-  const enProceso = lotesEjemplo.length - analizados.length
+export function HomePage({ nombre, lotes, alertas, esEjemplo = false, onNuevoAnalisis, onVerReportes, onDescargarReporte }: HomePageProps) {
+  const analizados = lotes.filter((lote) => lote.estado === 'analizado')
+  const enProceso = lotes.length - analizados.length
   const sumar = (campo: 'total_frutos' | 'frutos_sanos' | 'frutos_revision') =>
     analizados.reduce((suma, lote) => suma + (lote[campo] ?? 0), 0)
 
@@ -32,12 +35,16 @@ export function HomePage({ nombre, onNuevoAnalisis, onVerReportes, onDescargarRe
     if (lote.grado) porGrado[lote.grado] += 1
   }
 
+  // Suma de lo que la BD asignó a cada fruto de los lotes analizados
+  const porDestino = Object.fromEntries(DESTINOS.map((d) => [d.codigo, 0])) as Record<Destino, number>
+  for (const lote of analizados) for (const d of DESTINOS) porDestino[d.codigo] += lote.frutos_por_destino?.[d.codigo] ?? 0
+
   return (
     <div className="home">
       <section className="home__intro">
         <div>
           <p className="home__eyebrow">
-            Resumen de tus lotes <span className="demo-pill">Datos de ejemplo</span>
+            Resumen de tus lotes {esEjemplo && <span className="demo-pill">Datos de ejemplo</span>}
           </p>
           <h1 className="home__title">Hola, {nombre}</h1>
         </div>
@@ -70,7 +77,7 @@ export function HomePage({ nombre, onNuevoAnalisis, onVerReportes, onDescargarRe
             <h2 className="card__title">Destino de los frutos</h2>
             <p className="card__subtitle">{formatNumero(totalFrutos)} frutos en lotes analizados</p>
           </header>
-          <DestinoChart conteo={frutosPorDestinoEjemplo} />
+          <DestinoChart conteo={porDestino} />
         </article>
       </section>
 
@@ -85,7 +92,7 @@ export function HomePage({ nombre, onNuevoAnalisis, onVerReportes, onDescargarRe
               Ver todos
             </Button>
           </header>
-          <ReporteLotes lotes={lotesEjemplo.slice(0, 5)} onDescargar={onDescargarReporte} />
+          <ReporteLotes lotes={lotes.slice(0, 5)} onDescargar={onDescargarReporte} />
         </article>
       </section>
 
@@ -95,7 +102,7 @@ export function HomePage({ nombre, onNuevoAnalisis, onVerReportes, onDescargarRe
             <h2 className="card__title">Alertas de zona</h2>
             <p className="card__subtitle">Defectos repetidos en varios lotes de tu zona en los últimos 7 días</p>
           </header>
-          <AlertasZona alertas={alertasEjemplo} />
+          <AlertasZona alertas={alertas} />
         </article>
       </section>
 

@@ -11,7 +11,8 @@ type RegistrarZonaProps = {
   abierto: boolean
   existentes: readonly Zona[]
   onCerrar: () => void
-  onGuardar: (zona: NuevaZona) => void
+  /** Si lanza un Error, el mensaje se muestra en la hoja y no se cierra. */
+  onGuardar: (zona: NuevaZona) => void | Promise<void>
 }
 
 const VACIO = { nombre: '', municipio: '', estado: '', latitud: '', longitud: '' }
@@ -25,6 +26,8 @@ export function RegistrarZona({ abierto, existentes, onCerrar, onGuardar }: Regi
   const [datos, setDatos] = useState(VACIO)
   const [errores, setErrores] = useState<ReturnType<typeof validarZona>>({})
   const [intentado, setIntentado] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [errorGuardar, setErrorGuardar] = useState<string>()
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -44,24 +47,33 @@ export function RegistrarZona({ abierto, existentes, onCerrar, onGuardar }: Regi
     setDatos(VACIO)
     setErrores({})
     setIntentado(false)
+    setErrorGuardar(undefined)
     onCerrar()
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const encontrados = validarZona(datos, existentes)
     setIntentado(true)
     setErrores(encontrados)
     if (Object.keys(encontrados).length) return
     const texto = (valor: string) => valor.trim() || null
-    onGuardar({
-      nombre: datos.nombre.trim(),
-      municipio: texto(datos.municipio),
-      estado: texto(datos.estado),
-      latitud: datos.latitud.trim() ? Number(datos.latitud) : null,
-      longitud: datos.longitud.trim() ? Number(datos.longitud) : null,
-    })
-    cerrar()
+    setGuardando(true)
+    setErrorGuardar(undefined)
+    try {
+      await onGuardar({
+        nombre: datos.nombre.trim(),
+        municipio: texto(datos.municipio),
+        estado: texto(datos.estado),
+        latitud: datos.latitud.trim() ? Number(datos.latitud) : null,
+        longitud: datos.longitud.trim() ? Number(datos.longitud) : null,
+      })
+      cerrar()
+    } catch (error) {
+      setErrorGuardar(error instanceof Error ? error.message : 'No pudimos guardar la zona. Intenta de nuevo.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
@@ -119,11 +131,19 @@ export function RegistrarZona({ abierto, existentes, onCerrar, onGuardar }: Regi
           />
         </div>
 
+        {errorGuardar && (
+          <p className="field__message field__message--error" role="alert">
+            {errorGuardar}
+          </p>
+        )}
+
         <div className="hoja__acciones">
           <Button variant="secundario" onClick={cerrar}>
             Cancelar
           </Button>
-          <Button type="submit">Guardar zona</Button>
+          <Button type="submit" loading={guardando}>
+            Guardar zona
+          </Button>
         </div>
       </form>
     </dialog>
