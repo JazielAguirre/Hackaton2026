@@ -31,6 +31,10 @@ def analizar_lote(admin: Client, inferencia: ClienteInferencia, lote_id: UUID) -
         if not fotos:
             raise ValueError("El lote no tiene fotos válidas")
 
+        # La fruta del lote (si ya la tiene) manda sobre la del detector, que solo aprendió mango.
+        lote = admin.table("lotes").select("fruta_principal").eq("id", str(lote_id)).limit(1).execute().data
+        fruta = lote[0]["fruta_principal"] if lote else None
+
         clases = _ids_de_clases(admin)
         archivos = admin.storage.from_(BUCKET)
 
@@ -38,7 +42,7 @@ def analizar_lote(admin: Client, inferencia: ClienteInferencia, lote_id: UUID) -
         filas: list[dict[str, Any]] = []
         version = ""
         for foto in fotos:
-            resultado = inferencia.inferir(archivos.download(foto["storage_path"]))
+            resultado = inferencia.inferir(archivos.download(foto["storage_path"]), fruta)
             version = resultado.modelo_version
             filas += [f for f in (_fila_fruto(lote_id, foto["id"], d, clases) for d in resultado.frutos) if f]
 

@@ -20,7 +20,7 @@ class FrutoDetectado(BaseModel):
     caja_ancho: float
     caja_alto: float
     conf_deteccion: float
-    # Sin clasificador para esa fruta (todavía jitomate y fresa) estos tres vienen null.
+    # Sin clasificador para esa fruta, estos dos vienen null.
     clase_bd: str | None
     # Probabilidad top-1 de la clase del modelo, antes de agrupar clases en la BD.
     conf_clasificacion: float | None
@@ -37,11 +37,13 @@ class ClienteInferencia:
     def __init__(self, url: str) -> None:
         self.url = url.rstrip("/")
 
-    def inferir(self, imagen: bytes) -> ResultadoInferencia:
+    def inferir(self, imagen: bytes, fruta: str | None = None) -> ResultadoInferencia:
+        """Con `fruta` (la del lote) el servicio toma todas las cajas como esa fruta."""
         try:
             respuesta = httpx.post(
                 f"{self.url}/inferir",
                 files={"foto": ("foto.jpg", imagen, "image/jpeg")},
+                data={"fruta": fruta} if fruta else None,
                 timeout=TIMEOUT_SEGUNDOS,
             )
             respuesta.raise_for_status()

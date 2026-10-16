@@ -89,6 +89,40 @@ def test_fruta_sin_clasificador_queda_sin_clase(cliente, bd, inferencia):
     assert fruto["clase_id"] is None and fruto["conf_clasificacion"] is None
 
 
+def test_lote_de_fresa_manda_la_fruta_y_guarda_frutos_de_fresa(cliente, bd, inferencia):
+    lote_id = _lote(bd, fotos=2, fruta_principal="fresa")
+    inferencia.por_foto = [[detectado("fresa", clase_bd="moho_gris", conf=0.8)], [detectado("fresa", clase_bd="sana")]]
+
+    cliente.post(f"/lotes/{lote_id}/analizar")
+
+    assert inferencia.frutas == ["fresa", "fresa"]
+    frutos = bd.tablas["frutos"]
+    assert [f["fruta_id"] for f in frutos] == ["fresa", "fresa"]
+    assert [f["clase_id"] for f in frutos] == [7, 6]
+    assert frutos[0]["conf_clasificacion"] == 0.8
+
+
+def test_lote_de_jitomate_manda_la_fruta_y_guarda_frutos_de_jitomate(cliente, bd, inferencia):
+    lote_id = _lote(bd, fotos=1, fruta_principal="jitomate")
+    inferencia.por_foto = [[detectado("jitomate", clase_bd="pudricion_mancha"), detectado("jitomate", clase_bd="sano")]]
+
+    cliente.post(f"/lotes/{lote_id}/analizar")
+
+    assert inferencia.frutas == ["jitomate"]
+    frutos = bd.tablas["frutos"]
+    assert [f["fruta_id"] for f in frutos] == ["jitomate", "jitomate"]
+    assert [f["clase_id"] for f in frutos] == [5, 4]
+
+
+def test_lote_sin_fruta_no_manda_el_campo(cliente, bd, inferencia):
+    lote_id = _lote(bd, fotos=2)
+    inferencia.por_foto = [[detectado()], [detectado()]]
+
+    cliente.post(f"/lotes/{lote_id}/analizar")
+
+    assert inferencia.frutas == [None, None]
+
+
 def test_clase_que_no_existe_en_la_bd_queda_sin_clase(cliente, bd, inferencia):
     lote_id = _lote(bd, fotos=1)
     inferencia.por_foto = [[detectado(clase_bd="clase_rara")]]
@@ -318,3 +352,23 @@ def test_sin_sesion_responde_401():
     from app.main import app
 
     assert TestClient(app).post("/lotes/33333333-3333-3333-3333-333333333333/analizar").status_code == 401
+
+
+def test_el_cliente_manda_fruta_a_inferir_solo_si_la_hay(monkeypatch):
+    import httpx
+
+    from app.services.inferencia import ClienteInferencia
+
+    enviados = []
+
+    def falso_post(url, **kwargs):
+        enviados.append(kwargs.get("data"))
+        return httpx.Response(200, json={"frutos": [], "modelo_version": "v"}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", falso_post)
+    cliente_http = ClienteInferencia("http://inferencia")
+
+    cliente_http.inferir(b"x", "fresa")
+    cliente_http.inferir(b"x")
+
+    assert enviados == [{"fruta": "fresa"}, None]

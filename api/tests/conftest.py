@@ -39,6 +39,10 @@ def catalogos() -> dict[str, list[dict]]:
             {"id": 1, "fruta_id": "mango", "codigo": "sano", "nombre": "Sano"},
             {"id": 2, "fruta_id": "mango", "codigo": "antracnosis", "nombre": "Antracnosis"},
             {"id": 3, "fruta_id": "mango", "codigo": "otro_defecto", "nombre": "Otro defecto"},
+            {"id": 4, "fruta_id": "jitomate", "codigo": "sano", "nombre": "Sano"},
+            {"id": 5, "fruta_id": "jitomate", "codigo": "pudricion_mancha", "nombre": "Pudrición o mancha"},
+            {"id": 6, "fruta_id": "fresa", "codigo": "sana", "nombre": "Sana"},
+            {"id": 7, "fruta_id": "fresa", "codigo": "moho_gris", "nombre": "Moho gris"},
         ],
         "zonas": [
             {"id": 1, "nombre": "Valle", "activa": True},
@@ -88,10 +92,13 @@ class InferenciaFalsa:
     def __init__(self) -> None:
         self.por_foto: list[list[FrutoDetectado] | Exception] = []
         self.imagenes: list[bytes] = []
+        # La fruta que se mandó con cada foto (None si el lote no tenía fruta).
+        self.frutas: list[str | None] = []
 
-    def inferir(self, imagen: bytes) -> ResultadoInferencia:
+    def inferir(self, imagen: bytes, fruta: str | None = None) -> ResultadoInferencia:
         resultado = self.por_foto[len(self.imagenes)]
         self.imagenes.append(imagen)
+        self.frutas.append(fruta)
         if isinstance(resultado, Exception):
             raise resultado
         return ResultadoInferencia(frutos=resultado, modelo_version="prueba123")
