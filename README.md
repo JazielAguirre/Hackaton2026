@@ -71,14 +71,26 @@ Valores por defecto para CPU (todos se cambian por línea de comandos; ve `--hel
 | Clasificador | 224 | 32 | 20 | 5 | |
 | Detector | 480 | 8 | 30 | 8 | 10 capas congeladas; caché en RAM solo si cabe |
 
-Tiempos medidos con 1 época, en una laptop con Intel i5-1235U (10 núcleos, 12 hilos), 7.5 GB de RAM y sin GPU:
+Resultados del entrenamiento actual, en una laptop con Intel i5-1235U (10 núcleos, 12 hilos), 7.5 GB de RAM y sin GPU:
 
-| Modelo | Por época | Entrenamiento completo | RAM máxima |
-| --- | ---: | ---: | ---: |
-| Clasificador | ~30 s | 20 épocas ≈ 10 min | 1.3 GB |
-| Detector | ~2.2 min (con validación) | 30 épocas ≈ 1 h 10 min | 2.3 GB (con caché en RAM) |
+| Modelo | Comando | Épocas | Tiempo | RAM máxima |
+| --- | --- | --- | ---: | ---: |
+| Clasificador | `entrenar_clasificador.py --epochs 30 --patience 8` | 23 de 30 (la paciencia lo detuvo; mejor: 15) | 10 min 13 s | 1.3 GB |
+| Detector | `entrenar_detector.py --epochs 30 --imgsz 480` | 28 de 30 (la paciencia lo detuvo; mejor: 20) | 55 min 52 s | 2.3 GB (caché en RAM) |
 
-Si el modelo deja de mejorar, la paciencia lo detiene antes. Si la laptop se calienta, puede tardar más.
+Cada época tarda unos 25 s en el clasificador y unos 2 min en el detector (con su validación). Si la laptop se calienta, puede tardar más.
+
+Métricas en test, con fotos que el modelo nunca vio:
+
+| Modelo | Métricas |
+| --- | --- |
+| Clasificador, 5 clases del modelo | exactitud 0.924 · F1 macro 0.927 |
+| Clasificador, 4 clases de la base (`cancro_bacteriano` + `sarna` = `otro_defecto`) | exactitud 0.972 · F1 macro 0.973 |
+| Detector | mAP50 0.974 · mAP50-95 0.860 · precisión 0.956 · recall 0.924 |
+
+- **Clasificador:** el error más común es confundir `cancro_bacteriano` con `sarna`, que no cambia el destino. El que importa es antracnosis vista como `sarna` (ver [Umbral de confianza](#umbral-de-confianza)).
+- **Detector:** en val da mAP50 0.985 y mAP50-95 0.884. Su precisión en test sale algo baja por fotos mal etiquetadas del dataset (ver [Fotos "Background" con mangos sin etiquetar](#fotos-background-con-mangos-sin-etiquetar)).
+- **Detalle completo:** está en `ml/modelos/*/metricas.json`.
 
 Consejos para CPU:
 - **Cierra el navegador antes de entrenar.** El detector guarda las fotos en RAM si hay espacio, y eso lo hace más rápido.
@@ -171,6 +183,23 @@ Se respeta la división original del dataset: ninguna foto cambia de split, solo
 | test | 131 | 102 | 197 | 3 |
 
 En 103 de los duplicados exactos, la misma foto aparece como `Alternaria` y como `Anthracnose`. Al detector no le afecta, porque todas las cajas pasan a la clase `mango`, pero muestra que las clases de enfermedad de este dataset no son confiables.
+
+### Fotos "Background" con mangos sin etiquetar
+
+MangoFruitBD marca 24 fotos como "Background": huerta sin fruto, con etiqueta vacía. Al pasarles el detector ya entrenado, varias tienen mangos reales sin caja:
+
+| Foto | Detecciones del modelo (confianza ≥ 0.25) | Revisión |
+| --- | --- | --- |
+| `train/Background (1)` | 9, hasta 0.86 | En miniatura se ven mangos |
+| `train/Background (2)` | 5, hasta 0.74 | En miniatura se ve al menos un mango claro |
+| `test/Background (3)` | 6, hasta 0.82 | Con zoom: los 6 son mangos |
+| `train/Background (9)` | 1, de 0.70 | Por confirmar |
+
+**Cómo afecta a las métricas:**
+- **En train,** estas fotos le enseñan al detector a no ver esos mangos, lo que le resta algo de recall.
+- **En test,** las 6 detecciones correctas en `Background (3)` cuentan como falsos positivos. Por eso la precisión real del detector es algo mayor que la reportada (0.956).
+
+**Por ahora se dejan como están** (decisión del equipo). Se les dibujarán las cajas cuando se reentrene el detector con jitomate y fresa.
 
 ### Regla de las fotos aumentadas
 
