@@ -20,6 +20,7 @@ import {
   type LoteDetalle,
   type LoteReporte,
   type Sugerencia,
+  type Zona,
 } from '../utils/dominio'
 
 const DIA = 86_400_000
@@ -51,10 +52,14 @@ const UMBRALES: readonly { grado: Grado; min: number; max: number; destino: Dest
   { grado: 'C', min: 70, max: 5, destino: 'procesamiento' },
 ]
 
-type Zona = { id: number; nombre: string }
-const ZONA_CENTRO: Zona = { id: 1, nombre: 'Zona Centro' }
-const ZONA_NORTE: Zona = { id: 2, nombre: 'Zona Norte' }
-const ZONA_SUR: Zona = { id: 3, nombre: 'Zona Sur' }
+/** Simula la tabla zonas (catálogo). Zona Altos no tiene lotes: muestra el estado vacío. */
+export const zonasEjemplo: Zona[] = [
+  { id: 1, nombre: 'Zona Centro', municipio: 'Zapopan', estado: 'Jalisco', latitud: 20.7214, longitud: -103.3918, activa: true },
+  { id: 2, nombre: 'Zona Norte', municipio: 'Colotlán', estado: 'Jalisco', latitud: 22.1144, longitud: -103.2683, activa: true },
+  { id: 3, nombre: 'Zona Sur', municipio: 'Zapotlán el Grande', estado: 'Jalisco', latitud: 19.7037, longitud: -103.4612, activa: true },
+  { id: 4, nombre: 'Zona Altos', municipio: 'Tepatitlán de Morelos', estado: 'Jalisco', latitud: 20.8167, longitud: -102.7333, activa: true },
+]
+const [ZONA_CENTRO, ZONA_NORTE, ZONA_SUR] = zonasEjemplo
 
 type LoteSpec = {
   id: string

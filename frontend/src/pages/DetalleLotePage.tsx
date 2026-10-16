@@ -7,6 +7,7 @@ import { VisorFotos } from '../components/detalle/VisorFotos'
 import { GradoInsignia } from '../components/reportes/GradoInsignia'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
+import { Grupo, Panel } from '../components/ui/Panel'
 import { navegar, regresarA } from '../hooks/useRuta'
 import {
   CLASES_SANAS,
@@ -32,28 +33,6 @@ type DetalleLotePageProps = {
   lote: LoteDetalle | null
   esEjemplo?: boolean
   onDescargarPdf: (lote: Pick<LoteDetalle, 'id'>) => void
-}
-
-/** Grupo de paneles con un título corto; en escritorio, dos columnas. */
-function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <section className="detalle-grupo" aria-label={titulo}>
-      <h2 className="detalle-grupo__titulo">{titulo}</h2>
-      <div className="detalle-grupo__paneles">{children}</div>
-    </section>
-  )
-}
-
-function Panel({ titulo, subtitulo, className, children }: { titulo: string; subtitulo?: string; className?: string; children: ReactNode }) {
-  return (
-    <article className={`card ${className ?? ''}`}>
-      <header className="card__header">
-        <h3 className="card__title">{titulo}</h3>
-        {subtitulo && <p className="card__subtitle">{subtitulo}</p>}
-      </header>
-      {children}
-    </article>
-  )
 }
 
 function BotonVolver() {

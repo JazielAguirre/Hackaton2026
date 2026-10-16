@@ -78,12 +78,21 @@
   --destino-separar: #a51a1a;
   --destino-revision-manual: #94a3b8;
 
-  /* Grado del lote: un tono propio por grado, sólido y con texto blanco (contraste AA ≥ 4.5:1).
-     Siempre va con la letra o el nombre del grado; el color solo ayuda a ubicarlo rápido. */
-  --grado-a: #15803d; /* verde · 5.0:1 */
-  --grado-b: #1d4ed8; /* azul · 6.7:1 */
-  --grado-c: #b45309; /* ámbar · 5.0:1 */
-  --grado-rechazo: #b91c1c; /* rojo · 6.5:1 */
+  /* Grado del lote: un tono propio por grado. Paleta validada con el validador de dataviz
+     (contraste, daltonismo y visión normal) en claro y en oscuro. Siempre va con la letra o el nombre.
+     *-texto: texto sobre el color sólido (AA). *-tinta: letra de color sobre fondo tenue (AA). */
+  --grado-a: #15803d;
+  --grado-b: #1d4ed8;
+  --grado-c: #ca8a04;
+  --grado-rechazo: #b91c1c;
+  --grado-a-texto: #ffffff;
+  --grado-b-texto: #ffffff;
+  --grado-c-texto: #1c1300; /* el amarillo no da contraste con blanco */
+  --grado-rechazo-texto: #ffffff;
+  --grado-a-tinta: #15803d;
+  --grado-b-tinta: #1d4ed8;
+  --grado-c-tinta: #854d0e;
+  --grado-rechazo-tinta: #b91c1c;
 
   /* Fruta: color sólido de cada cultivo y el texto que va encima */
   --fruta-mango: #f5b21b;
@@ -128,6 +137,20 @@
   --color-error-text: color-mix(in srgb, var(--color-error) 65%, white);
   --shadow-card: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
   --shadow-thumb: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -4px rgba(0, 0, 0, 0.45);
+
+  /* Grados en oscuro: pasos más claros de los mismos tonos, validados contra la tarjeta (#1e293b) */
+  --grado-a: #16a34a;
+  --grado-b: #3b82f6;
+  --grado-c: #c28404;
+  --grado-rechazo: #e11d48;
+  --grado-a-texto: var(--color-gray-900);
+  --grado-b-texto: var(--color-gray-900);
+  --grado-c-texto: var(--color-gray-900);
+  --grado-rechazo-texto: #ffffff;
+  --grado-a-tinta: #4ade80;
+  --grado-b-tinta: #93b4fb;
+  --grado-c-tinta: #facc15;
+  --grado-rechazo-tinta: #fb7185;
 }
 
 /* Cambio de tema con fundido suave en vez de un salto brusco de brillo */

@@ -133,6 +133,23 @@
   background: var(--color-brand);
 }
 
+/* Barras de grado: el tono del grado (tokens --grado-* en global.css) */
+.bar-chart__bar[data-grado='A'] {
+  background: var(--grado-a);
+}
+
+.bar-chart__bar[data-grado='B'] {
+  background: var(--grado-b);
+}
+
+.bar-chart__bar[data-grado='C'] {
+  background: var(--grado-c);
+}
+
+.bar-chart__bar[data-grado='rechazo'] {
+  background: var(--grado-rechazo);
+}
+
 .bar-chart__value {
   font-size: 0.875rem;
   font-weight: 600;
