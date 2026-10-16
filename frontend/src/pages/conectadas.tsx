@@ -5,10 +5,10 @@ import type { NuevaZona } from '../components/zonas/RegistrarZona'
 import { useConsulta } from '../hooks/useConsulta'
 import { navegar } from '../hooks/useRuta'
 import { ApiError } from '../lib/api'
-import { crearZona, enviarLote, leerAlertas, leerBitacora, leerLote, leerParcelas, leerZonas } from '../lib/datos'
+import { crearZona, enviarLote, leerAlertas, leerBitacora, leerLote, leerParcelas, leerZonas, reintentarAnalisis } from '../lib/datos'
 import { rutaLote } from '../utils/reportes'
 import { resumirZona } from '../utils/zonas'
-import type { AlertaComunitaria, LoteBitacora, LoteReporte } from '../utils/dominio'
+import { analisisDetenido, type AlertaComunitaria, type LoteBitacora, type LoteReporte } from '../utils/dominio'
 import { DetalleLotePage } from './DetalleLotePage'
 import { HomePage } from './HomePage'
 import { NuevoAnalisisPage, type NuevoLote } from './NuevoAnalisisPage'
@@ -112,18 +112,23 @@ const SEGUNDOS_ENTRE_CONSULTAS = 3
 
 export function DetalleConectado({ id, onDescargarPdf }: { id: string; onDescargarPdf: Descargar }) {
   const lote = useConsulta(() => leerLote(id), id)
-  const analizando = lote.datos?.estado === 'analizando'
-
   // Mientras el lote se analiza, se vuelve a consultar hasta que quede `analizado` o `error`.
+  // Si lleva demasiado en `analizando` (la API se cayó) se deja de consultar y se ofrece reintentar.
+  const analizando = lote.datos?.estado === 'analizando' && !analisisDetenido(lote.datos)
   useEffect(() => {
     if (!analizando) return
     const temporizador = setInterval(lote.recargar, SEGUNDOS_ENTRE_CONSULTAS * 1000)
     return () => clearInterval(temporizador)
   }, [analizando, lote.recargar])
 
+  async function reintentar() {
+    await reintentarAnalisis(id)
+    lote.recargar()
+  }
+
   // Un lote que no existe (o es de otro usuario) usa la pantalla "No encontramos el lote".
   if (lote.error instanceof ApiError && lote.error.status === 404) return <DetalleLotePage lote={null} onDescargarPdf={onDescargarPdf} />
-  return <Cargando consulta={lote}>{(datos) => <DetalleLotePage lote={datos} onDescargarPdf={onDescargarPdf} />}</Cargando>
+  return <Cargando consulta={lote}>{(datos) => <DetalleLotePage lote={datos} onDescargarPdf={onDescargarPdf} onReintentar={reintentar} />}</Cargando>
 }
 
 export function ZonasConectado() {

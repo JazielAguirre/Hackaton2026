@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { ApiError } from '../lib/api'
 import { DestinoChart } from '../components/dashboard/DestinoChart'
 import { FichaFruto } from '../components/detalle/FichaFruto'
 import { FotoMarcada } from '../components/detalle/FotoMarcada'
@@ -10,6 +11,7 @@ import { Icon } from '../components/ui/Icon'
 import { Grupo, Panel } from '../components/ui/Panel'
 import { navegar, regresarA } from '../hooks/useRuta'
 import {
+  analisisDetenido,
   CLASES_SANAS,
   DESTINOS,
   formatFechaHora,
@@ -33,6 +35,8 @@ type DetalleLotePageProps = {
   lote: LoteDetalle | null
   esEjemplo?: boolean
   onDescargarPdf: (lote: Pick<LoteDetalle, 'id'>) => void
+  /** Vuelve a lanzar el análisis de un lote en `error` o atascado en `analizando`. */
+  onReintentar?: () => Promise<void>
 }
 
 function BotonVolver() {
@@ -44,7 +48,7 @@ function BotonVolver() {
   )
 }
 
-export function DetalleLotePage({ lote, esEjemplo = false, onDescargarPdf }: DetalleLotePageProps) {
+export function DetalleLotePage({ lote, esEjemplo = false, onDescargarPdf, onReintentar }: DetalleLotePageProps) {
   if (!lote) {
     return (
       <div className="detalle detalle--vacio">
@@ -58,10 +62,20 @@ export function DetalleLotePage({ lote, esEjemplo = false, onDescargarPdf }: Det
     )
   }
   // key: si cambia el lote, la selección y el visor empiezan de cero
-  return <Detalle key={lote.id} lote={lote} esEjemplo={esEjemplo} onDescargarPdf={onDescargarPdf} />
+  return <Detalle key={lote.id} lote={lote} esEjemplo={esEjemplo} onDescargarPdf={onDescargarPdf} onReintentar={onReintentar} />
 }
 
-function Detalle({ lote, esEjemplo, onDescargarPdf }: { lote: LoteDetalle; esEjemplo: boolean; onDescargarPdf: DetalleLotePageProps['onDescargarPdf'] }) {
+function Detalle({
+  lote,
+  esEjemplo,
+  onDescargarPdf,
+  onReintentar,
+}: {
+  lote: LoteDetalle
+  esEjemplo: boolean
+  onDescargarPdf: DetalleLotePageProps['onDescargarPdf']
+  onReintentar?: DetalleLotePageProps['onReintentar']
+}) {
   const { analisis, fotos, frutos } = lote
   const cultivo = nombreCultivo(lote.fruta_principal)
   const lugar = lote.parcela ?? lote.zona_nombre ?? 'Sin parcela'
@@ -70,6 +84,22 @@ function Detalle({ lote, esEjemplo, onDescargarPdf }: { lote: LoteDetalle; esEje
   const [seleccionado, setSeleccionado] = useState<string | null>(null)
   const [resaltado, setResaltado] = useState<Destino | null>(null)
   const [visorAbierto, setVisorAbierto] = useState(false)
+  const [reintentando, setReintentando] = useState(false)
+  const [errorReintento, setErrorReintento] = useState<string | null>(null)
+  const detenido = !analisis && analisisDetenido(lote)
+
+  async function reintentar() {
+    if (!onReintentar) return
+    setReintentando(true)
+    setErrorReintento(null)
+    try {
+      await onReintentar()
+    } catch (error) {
+      setErrorReintento(error instanceof ApiError ? error.message : 'No pudimos reintentar el análisis. Intenta de nuevo.')
+    } finally {
+      setReintentando(false)
+    }
+  }
 
   // Un número por fruto, en el orden de las fotos: une la foto, el mapa y la ficha
   const numeros = useMemo(() => new Map(frutos.map((f, i) => [f.id, i + 1])), [frutos])
@@ -215,13 +245,23 @@ function Detalle({ lote, esEjemplo, onDescargarPdf }: { lote: LoteDetalle; esEje
               )}
             </>
           ) : (
-            <p className="veredicto__pendiente">
-              {lote.estado === 'analizando'
-                ? 'Estamos analizando las fotos de este lote. El resultado aparece aquí en cuanto termine.'
-                : lote.estado === 'error'
-                  ? 'No pudimos analizar este lote. Intenta subir las fotos otra vez.'
-                  : 'Este lote todavía no tiene análisis. Sube fotos de la charola para analizarlo.'}
-            </p>
+            <>
+              <p className="veredicto__pendiente">
+                {lote.estado === 'error'
+                  ? 'No pudimos analizar este lote.'
+                  : lote.estado === 'analizando'
+                    ? detenido
+                      ? 'El análisis tardó más de lo normal y se detuvo.'
+                      : 'Estamos analizando las fotos de este lote. El resultado aparece aquí en cuanto termine.'
+                    : 'Este lote todavía no tiene análisis. Sube fotos de la charola para analizarlo.'}
+              </p>
+              {detenido && onReintentar && (
+                <Button onClick={reintentar} loading={reintentando}>
+                  Reintentar análisis
+                </Button>
+              )}
+              {errorReintento && <p className="veredicto__aviso">{errorReintento}</p>}
+            </>
           )}
         </Panel>
 
@@ -353,7 +393,7 @@ function Detalle({ lote, esEjemplo, onDescargarPdf }: { lote: LoteDetalle; esEje
                 {evento.detalle && <p className="historial__detalle">{evento.detalle}</p>}
               </li>
             ))}
-            {lote.estado === 'analizando' && (
+            {lote.estado === 'analizando' && !detenido && (
               <li className="historial__evento" data-en-curso>
                 <p className="historial__titulo">Análisis en curso…</p>
               </li>

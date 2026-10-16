@@ -36,6 +36,9 @@ export async function leerAlertas(): Promise<AlertaComunitaria[]> {
 /** Solo acopio y técnico pueden; a un productor la API le responde 403 con su mensaje. */
 export const crearZona = (zona: NuevaZona) => apiPost<Zona>('/zonas', zona)
 
+/** Vuelve a lanzar el análisis de un lote en `error` o atascado en `analizando` (la API borra los restos). */
+export const reintentarAnalisis = (id: string) => apiPost(`/lotes/${encodeURIComponent(id)}/analizar`)
+
 export type Parcela = { id: string; nombre: string }
 
 /** Parcelas activas del usuario (RLS solo deja ver las suyas). */
