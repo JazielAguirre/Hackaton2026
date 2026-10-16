@@ -3,15 +3,18 @@ import { FotosLote } from '../components/analisis/FotosLote'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
 import { TextField } from '../components/ui/TextField'
+import { NOMBRE_FRUTA } from '../utils/dominio'
 import { validarFotos, type FotoLocal } from '../utils/fotos'
 import '../styles/nuevo-analisis.css'
 
 /**
  * Lo que la página entrega para crear el lote (POST /lotes) y subir sus fotos (POST /lotes/{id}/fotos).
- * La fruta la identifica el detector; el nombre del lote se genera solo.
+ * La fruta la elige el productor: el detector solo se entrenó con mango y la API usa la fruta del lote
+ * para escoger el clasificador. El nombre del lote se genera solo.
  */
 export type NuevoLote = {
   nombre: string
+  fruta_principal: string
   parcela_id: string
   fecha_cosecha: string
   fotos: File[]
@@ -35,6 +38,8 @@ function fechaLocal(fecha: Date): string {
 const formatoNombre = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 
 export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar, onRegistrarParcela }: NuevoAnalisisPageProps) {
+  const [fruta, setFruta] = useState('')
+  const [errorFruta, setErrorFruta] = useState<string>()
   const [parcelaId, setParcelaId] = useState('')
   const [errorParcela, setErrorParcela] = useState<string>()
   const [hoy] = useState(() => fechaLocal(new Date()))
@@ -69,10 +74,11 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar, onRegistrarP
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // Cada lote pertenece a una parcela; se revisa todo junto para mostrar los dos avisos a la vez
+    // Cada lote tiene fruta y parcela; se revisa todo junto para mostrar todos los avisos a la vez
+    if (!fruta) setErrorFruta('Elige la fruta del lote.')
     if (!parcelaId) setErrorParcela('Elige la parcela del lote.')
     if (fotos.length === 0) setErrorFotos('Agrega al menos una foto.')
-    if (!parcelaId || fotos.length === 0) return
+    if (!fruta || !parcelaId || fotos.length === 0) return
 
     const ahora = new Date()
     setEnviando(true)
@@ -80,6 +86,7 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar, onRegistrarP
     try {
       await onSubmit({
         nombre: `Lote ${formatoNombre.format(ahora)}`,
+        fruta_principal: fruta,
         parcela_id: parcelaId,
         fecha_cosecha: fechaCosecha || hoy,
         fotos: fotos.map((foto) => foto.file),
@@ -92,7 +99,9 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar, onRegistrarP
   }
 
   const nombreParcela = parcelas.find((p) => p.id === parcelaId)?.nombre
-  const resumen = [fotos.length && `${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}`, nombreParcela].filter(Boolean).join(' · ')
+  const resumen = [fotos.length && `${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}`, NOMBRE_FRUTA[fruta], nombreParcela]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <form className="nuevo" onSubmit={handleSubmit} noValidate>
@@ -102,7 +111,7 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar, onRegistrarP
           Inicio
         </button>
         <h1 className="nuevo__title">Nuevo análisis</h1>
-        <p className="nuevo__subtitle">Toma o sube fotos de tu lote. Identificamos la fruta y te damos su grado.</p>
+        <p className="nuevo__subtitle">Toma o sube fotos de tu lote y te damos su grado.</p>
       </header>
 
       <section className="card" aria-label="Fotos del lote">
@@ -110,6 +119,36 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar, onRegistrarP
       </section>
 
       <section className="card nuevo__datos" aria-label="Datos del lote">
+        <div className="field" data-invalid={errorFruta ? true : undefined}>
+          <label className="field__label" htmlFor="fruta">
+            Fruta
+          </label>
+          <div className="field__control field__control--select">
+            <select
+              id="fruta"
+              className="field__input"
+              value={fruta}
+              aria-invalid={errorFruta ? true : undefined}
+              aria-describedby={errorFruta ? 'fruta-error' : undefined}
+              onChange={(e) => {
+                setFruta(e.target.value)
+                setErrorFruta(undefined)
+              }}
+            >
+              <option value="">Elige la fruta</option>
+              {Object.entries(NOMBRE_FRUTA).map(([id, nombre]) => (
+                <option key={id} value={id}>
+                  {nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          {errorFruta && (
+            <p id="fruta-error" className="field__message field__message--error">
+              {errorFruta}
+            </p>
+          )}
+        </div>
         {parcelas.length === 0 ? (
           <div className="nuevo__sin-parcelas" role="alert">
             <p className="nuevo__sin-parcelas-texto">Para analizar un lote, primero registra una parcela.</p>
