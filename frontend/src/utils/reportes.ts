@@ -11,7 +11,8 @@ export type VistaLista = 'tabla' | 'tarjetas'
 export type Filtros = {
   q: string
   cultivos: string[]
-  zona: string
+  /** id de la parcela, o SIN_PARCELA para los lotes viejos que no tienen */
+  parcela: string
   desde: string
   hasta: string
   grados: Grado[]
@@ -29,7 +30,7 @@ export function leerFiltros(params: URLSearchParams): Filtros {
   return {
     q: params.get('q') ?? '',
     cultivos: lista(params.get('cultivo')),
-    zona: params.get('zona') ?? '',
+    parcela: params.get('parcela') ?? '',
     desde: params.get('desde') ?? '',
     hasta: params.get('hasta') ?? '',
     grados: lista(params.get('grado')).filter((g): g is Grado => GRADOS.includes(g as Grado)),
@@ -44,7 +45,7 @@ export function escribirFiltros(filtros: Filtros, vista: VistaLista | null): str
   // Sin recortar: el espacio entre palabras se escribe letra por letra
   if (filtros.q.trim()) params.set('q', filtros.q)
   if (filtros.cultivos.length) params.set('cultivo', filtros.cultivos.join(','))
-  if (filtros.zona) params.set('zona', filtros.zona)
+  if (filtros.parcela) params.set('parcela', filtros.parcela)
   if (filtros.desde) params.set('desde', filtros.desde)
   if (filtros.hasta) params.set('hasta', filtros.hasta)
   if (filtros.grados.length) params.set('grado', filtros.grados.join(','))
@@ -59,26 +60,32 @@ export function escribirFiltros(filtros: Filtros, vista: VistaLista | null): str
 
 /** Filtros activos (el orden no cuenta como filtro). */
 export function contarFiltros(f: Filtros): number {
-  return (f.q.trim() ? 1 : 0) + f.cultivos.length + (f.zona ? 1 : 0) + (f.desde ? 1 : 0) + (f.hasta ? 1 : 0) + f.grados.length
+  return (f.q.trim() ? 1 : 0) + f.cultivos.length + (f.parcela ? 1 : 0) + (f.desde ? 1 : 0) + (f.hasta ? 1 : 0) + f.grados.length
 }
 
 export function sinFiltros(f: Filtros): Filtros {
-  return { ...f, q: '', cultivos: [], zona: '', desde: '', hasta: '', grados: [] }
+  return { ...f, q: '', cultivos: [], parcela: '', desde: '', hasta: '', grados: [] }
 }
 
 /* ---------- Opciones de los filtros: salen de los datos, no de listas fijas ---------- */
 
 export function opcionesFiltros(lotes: readonly LoteReporte[]) {
   const cultivos = [...new Set(lotes.map((l) => l.fruta_principal).filter((c): c is string => Boolean(c)))]
-  const zonas = new Map<string, string>()
-  for (const l of lotes) if (l.zona_id !== null) zonas.set(String(l.zona_id), l.zona_nombre ?? `Zona ${l.zona_id}`)
+  const parcelas = new Map<string, string>()
+  for (const l of lotes) if (l.parcela_id) parcelas.set(l.parcela_id, nombreParcela(l))
   const grados = GRADOS.filter((g) => lotes.some((l) => l.grado === g))
   return {
     cultivos: cultivos.sort((a, b) => nombreCultivo(a).localeCompare(nombreCultivo(b), 'es')),
-    zonas: [...zonas].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    parcelas: [...parcelas].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    haySinParcela: lotes.some((l) => !l.parcela_id),
     grados,
   }
 }
+
+export const SIN_PARCELA = 'sin'
+
+/** Los lotes viejos, de antes de que la parcela fuera obligatoria, no tienen parcela_id. */
+export const nombreParcela = (l: Pick<LoteReporte, 'parcela_id' | 'parcela'>) => (l.parcela_id ? (l.parcela ?? 'Parcela sin nombre') : 'Sin parcela')
 
 export const nombreCultivo = (codigo: string | null) => (codigo ? (NOMBRE_FRUTA[codigo] ?? codigo) : 'Sin cultivo')
 
@@ -91,9 +98,9 @@ export const fechaLote = (l: LoteReporte) => l.fecha_cosecha ?? l.created_at?.sl
 export function filtrarLotes(lotes: readonly LoteReporte[], f: Filtros): LoteReporte[] {
   const q = normalizar(f.q.trim())
   return lotes.filter((l) => {
-    if (q && !normalizar(`${l.nombre ?? ''} ${l.parcela ?? ''} ${l.id}`).includes(q)) return false
+    if (q && !normalizar(`${l.nombre ?? ''} ${nombreParcela(l)} ${l.id}`).includes(q)) return false
     if (f.cultivos.length && !f.cultivos.includes(l.fruta_principal ?? '')) return false
-    if (f.zona && String(l.zona_id) !== f.zona) return false
+    if (f.parcela && (f.parcela === SIN_PARCELA ? l.parcela_id : l.parcela_id !== f.parcela)) return false
     if (f.desde && fechaLote(l) < f.desde) return false
     if (f.hasta && fechaLote(l) > f.hasta) return false
     if (f.grados.length && (!l.grado || !f.grados.includes(l.grado))) return false
@@ -112,7 +119,7 @@ function valorOrden(l: LoteReporte, columna: Columna): string | number | null {
     case 'cultivo':
       return nombreCultivo(l.fruta_principal)
     case 'parcela':
-      return l.parcela ?? l.zona_nombre
+      return nombreParcela(l)
     case 'frutos':
       return l.total_frutos
     case 'sanos':
@@ -173,12 +180,12 @@ const celda = (valor: string | number | null | undefined) => {
 /** CSV que Excel abre directo (BOM para que respete acentos). */
 export function descargarExcel(lotes: readonly LoteReporte[], nombreArchivo: string) {
   const encabezado = [
-    'Lote', 'ID', 'Fecha de cosecha', 'Cultivo', 'Parcela', 'Zona', 'Estado', 'Frutos clasificados',
+    'Lote', 'ID', 'Fecha de cosecha', 'Cultivo', 'Parcela', 'Estado', 'Frutos clasificados',
     'En revisión manual', '% sanos', '% para separar', 'Grado', 'Destino del lote',
     ...DESTINOS.map((d) => `Frutos: ${d.nombre}`),
   ]
   const filas = lotes.map((l) => [
-    l.nombre, l.id, l.fecha_cosecha, nombreCultivo(l.fruta_principal), l.parcela, l.zona_nombre,
+    l.nombre, l.id, l.fecha_cosecha, nombreCultivo(l.fruta_principal), nombreParcela(l),
     l.estado ? NOMBRE_ESTADO[l.estado] : '', l.total_frutos, l.frutos_revision, l.pct_sanos, l.pct_separar,
     l.grado ? NOMBRE_GRADO[l.grado] : '', l.destino_lote ? NOMBRE_DESTINO[l.destino_lote] : '',
     ...DESTINOS.map((d) => l.frutos_por_destino?.[d.codigo] ?? ''),

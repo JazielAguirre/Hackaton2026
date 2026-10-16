@@ -1,30 +1,33 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { Zona } from '../../utils/dominio'
-import { validarZona } from '../../utils/zonas'
+import type { Parcela } from '../../utils/dominio'
+import { validarParcela } from '../../utils/parcelas'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { TextField } from '../ui/TextField'
 
-export type NuevaZona = Pick<Zona, 'nombre' | 'municipio' | 'estado' | 'latitud' | 'longitud'>
+export type NuevaParcela = Pick<Parcela, 'nombre' | 'latitud' | 'longitud'>
 
-type RegistrarZonaProps = {
+type RegistrarParcelaProps = {
   abierto: boolean
-  existentes: readonly Zona[]
+  existentes: readonly Pick<Parcela, 'nombre'>[]
   onCerrar: () => void
-  onGuardar: (zona: NuevaZona) => void
+  /** Si lanza un Error, el mensaje se muestra en la hoja y no se cierra. */
+  onGuardar: (parcela: NuevaParcela) => void | Promise<void>
 }
 
-const VACIO = { nombre: '', municipio: '', estado: '', latitud: '', longitud: '' }
+const VACIO = { nombre: '', latitud: '', longitud: '' }
 
 /**
- * Hoja para registrar una zona (<dialog> nativo: atrapa el foco y cierra con Escape).
+ * Hoja para registrar una parcela (<dialog> nativo: atrapa el foco y cierra con Escape).
  * En celular sube desde abajo; en escritorio aparece al centro. Sale por el mismo camino.
  */
-export function RegistrarZona({ abierto, existentes, onCerrar, onGuardar }: RegistrarZonaProps) {
+export function RegistrarParcela({ abierto, existentes, onCerrar, onGuardar }: RegistrarParcelaProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [datos, setDatos] = useState(VACIO)
-  const [errores, setErrores] = useState<ReturnType<typeof validarZona>>({})
+  const [errores, setErrores] = useState<ReturnType<typeof validarParcela>>({})
   const [intentado, setIntentado] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [errorGuardar, setErrorGuardar] = useState<string>()
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -37,67 +40,69 @@ export function RegistrarZona({ abierto, existentes, onCerrar, onGuardar }: Regi
     const nuevos = { ...datos, [campo]: valor }
     setDatos(nuevos)
     // Después del primer intento, los errores se corrigen mientras se escribe
-    if (intentado) setErrores(validarZona(nuevos, existentes))
+    if (intentado) setErrores(validarParcela(nuevos, existentes))
   }
 
   function cerrar() {
     setDatos(VACIO)
     setErrores({})
     setIntentado(false)
+    setErrorGuardar(undefined)
     onCerrar()
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const encontrados = validarZona(datos, existentes)
+    const encontrados = validarParcela(datos, existentes)
     setIntentado(true)
     setErrores(encontrados)
     if (Object.keys(encontrados).length) return
-    const texto = (valor: string) => valor.trim() || null
-    onGuardar({
-      nombre: datos.nombre.trim(),
-      municipio: texto(datos.municipio),
-      estado: texto(datos.estado),
-      latitud: datos.latitud.trim() ? Number(datos.latitud) : null,
-      longitud: datos.longitud.trim() ? Number(datos.longitud) : null,
-    })
-    cerrar()
+    setGuardando(true)
+    setErrorGuardar(undefined)
+    try {
+      await onGuardar({
+        nombre: datos.nombre.trim(),
+        latitud: datos.latitud.trim() ? Number(datos.latitud) : null,
+        longitud: datos.longitud.trim() ? Number(datos.longitud) : null,
+      })
+      cerrar()
+    } catch (error) {
+      setErrorGuardar(error instanceof Error ? error.message : 'No pudimos guardar la parcela. Intenta de nuevo.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
     <dialog
       ref={dialogRef}
       className="hoja"
-      aria-labelledby="registrar-zona-titulo"
+      aria-labelledby="registrar-parcela-titulo"
       onClose={cerrar}
       onClick={(event) => event.target === event.currentTarget && cerrar()}
     >
       <form className="hoja__contenido" onSubmit={handleSubmit} noValidate>
         <header className="hoja__header">
-          <h2 id="registrar-zona-titulo" className="hoja__titulo">
-            Registrar zona
+          <h2 id="registrar-parcela-titulo" className="hoja__titulo">
+            Registrar parcela
           </h2>
           <button type="button" className="icon-button" onClick={cerrar} aria-label="Cerrar">
             <Icon name="cerrar" />
           </button>
         </header>
 
-        <p className="hoja__texto">Las zonas agrupan los lotes de una región para ver su calidad y avisar de brotes.</p>
+        <p className="hoja__texto">Cada lote que analizas pertenece a una parcela. Así ves la calidad de cada terreno.</p>
 
         <TextField
           label="Nombre"
           value={datos.nombre}
           onChange={(e) => cambiar('nombre', e.target.value)}
           error={errores.nombre}
-          placeholder="Ej. Zona Valles"
+          placeholder="Ej. El Mirador"
           maxLength={80}
           autoComplete="off"
           required
         />
-        <div className="hoja__fila">
-          <TextField label="Municipio" value={datos.municipio} onChange={(e) => cambiar('municipio', e.target.value)} hint="Opcional" />
-          <TextField label="Estado" value={datos.estado} onChange={(e) => cambiar('estado', e.target.value)} hint="Opcional" />
-        </div>
         <div className="hoja__fila">
           <TextField
             label="Latitud"
@@ -119,11 +124,19 @@ export function RegistrarZona({ abierto, existentes, onCerrar, onGuardar }: Regi
           />
         </div>
 
+        {errorGuardar && (
+          <p className="field__message field__message--error" role="alert">
+            {errorGuardar}
+          </p>
+        )}
+
         <div className="hoja__acciones">
           <Button variant="secundario" onClick={cerrar}>
             Cancelar
           </Button>
-          <Button type="submit">Guardar zona</Button>
+          <Button type="submit" loading={guardando}>
+            Guardar parcela
+          </Button>
         </div>
       </form>
     </dialog>

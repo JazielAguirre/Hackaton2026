@@ -1,19 +1,16 @@
-import {
-  CLASES_SANAS,
-  DESTINOS,
-  GRADOS,
-  type AlertaComunitaria,
-  type Destino,
-  type Grado,
-  type LoteReporte,
-  type Zona,
-} from './dominio'
+import { CLASES_SANAS, DESTINOS, GRADOS, type Destino, type Grado, type LoteReporte, type Parcela } from './dominio'
 
-export const rutaZona = (id: number) => `/zonas/${id}`
+export const MENSAJE_NOMBRE_REPETIDO = 'Ya tienes una parcela con ese nombre'
 
-export type ResumenZona = {
-  zona: Zona
-  /** Todos los lotes de la zona (también los que siguen en análisis) */
+export const rutaParcela = (id: string) => `/parcelas/${encodeURIComponent(id)}`
+
+/** Coordenadas con 4 decimales, o aviso si no se registraron. */
+export const ubicacion = (p: Parcela) =>
+  p.latitud !== null && p.longitud !== null ? `${p.latitud.toFixed(4)}, ${p.longitud.toFixed(4)}` : 'Sin ubicación'
+
+export type ResumenParcela = {
+  parcela: Parcela
+  /** Todos los lotes de la parcela (también los que siguen en análisis) */
   lotes: LoteReporte[]
   analizados: number
   frutosClasificados: number
@@ -22,19 +19,18 @@ export type ResumenZona = {
   pctSeparar: number | null
   porGrado: Record<Grado, number>
   porDestino: Record<Destino, number>
-  /** Defectos más frecuentes en la zona: { codigo, n } de mayor a menor */
+  /** Defectos más frecuentes en la parcela: { codigo, n } de mayor a menor */
   defectos: { codigo: string; fruta: string; n: number }[]
-  alertas: AlertaComunitaria[]
   ultimoAnalisis: string | null
 }
 
 /**
- * Junta lo que ya calculó la base de datos por lote (bitacora_lotes) para una zona.
+ * Junta lo que ya calculó la base de datos por lote (bitacora_lotes) para una parcela.
  * Solo suma; no vuelve a clasificar ni a asignar grados.
  */
-export function resumirZona(zona: Zona, lotes: readonly LoteReporte[], alertas: readonly AlertaComunitaria[]): ResumenZona {
-  const deZona = lotes.filter((l) => l.zona_id === zona.id)
-  const analizados = deZona.filter((l) => l.estado === 'analizado' && l.analisis_id !== null)
+export function resumirParcela(parcela: Parcela, lotes: readonly LoteReporte[]): ResumenParcela {
+  const deParcela = lotes.filter((l) => l.parcela_id === parcela.id)
+  const analizados = deParcela.filter((l) => l.estado === 'analizado' && l.analisis_id !== null)
 
   const porGrado = Object.fromEntries(GRADOS.map((g) => [g, 0])) as Record<Grado, number>
   const porDestino = Object.fromEntries(DESTINOS.map((d) => [d.codigo, 0])) as Record<Destino, number>
@@ -66,8 +62,8 @@ export function resumirZona(zona: Zona, lotes: readonly LoteReporte[], alertas: 
   }
 
   return {
-    zona,
-    lotes: deZona,
+    parcela,
+    lotes: deParcela,
     analizados: analizados.length,
     frutosClasificados: frutos,
     pctSanos: frutos ? (100 * sanos) / frutos : null,
@@ -75,22 +71,22 @@ export function resumirZona(zona: Zona, lotes: readonly LoteReporte[], alertas: 
     porGrado,
     porDestino,
     defectos: [...conteoDefectos.values()].sort((a, b) => b.n - a.n),
-    alertas: alertas.filter((a) => a.zona_id === zona.id),
     ultimoAnalisis: ultimo,
   }
 }
 
-/** Valida los datos de una zona nueva. Devuelve un mensaje por campo con error. */
-export function validarZona(
+/** Valida los datos de una parcela nueva. Devuelve un mensaje por campo con error. */
+export function validarParcela(
   datos: { nombre: string; latitud: string; longitud: string },
-  existentes: readonly Zona[],
+  existentes: readonly Pick<Parcela, 'nombre'>[],
 ): Partial<Record<'nombre' | 'latitud' | 'longitud', string>> {
   const errores: Partial<Record<'nombre' | 'latitud' | 'longitud', string>> = {}
   const nombre = datos.nombre.trim()
-  const normal = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
-  if (!nombre) errores.nombre = 'Escribe el nombre de la zona.'
+  // La base compara sin mayúsculas ni espacios de más; aquí también sin acentos para avisar antes
+  const normal = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ')
+  if (!nombre) errores.nombre = 'Escribe el nombre de la parcela.'
   else if (nombre.length > 80) errores.nombre = 'Usa máximo 80 caracteres.'
-  else if (existentes.some((z) => normal(z.nombre) === normal(nombre))) errores.nombre = 'Ya existe una zona con ese nombre.'
+  else if (existentes.some((p) => normal(p.nombre) === normal(nombre))) errores.nombre = MENSAJE_NOMBRE_REPETIDO
 
   const revisar = (campo: 'latitud' | 'longitud', limite: number) => {
     const texto = datos[campo].trim()
@@ -100,7 +96,7 @@ export function validarZona(
   }
   revisar('latitud', 90)
   revisar('longitud', 180)
-  // Las coordenadas van juntas: una sola no sirve para ubicar la zona
+  // Las coordenadas van juntas: una sola no sirve para ubicar la parcela
   if (!errores.latitud && !errores.longitud && Boolean(datos.latitud.trim()) !== Boolean(datos.longitud.trim())) {
     errores[datos.latitud.trim() ? 'longitud' : 'latitud'] = 'Escribe latitud y longitud, o deja las dos vacías.'
   }

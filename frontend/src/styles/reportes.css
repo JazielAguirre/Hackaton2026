@@ -224,7 +224,7 @@
   margin-inline-end: calc(var(--space-3) * -1);
 }
 
-/* Celular: zona, fechas y grado se pliegan detrás de "Filtros (n)" */
+/* Celular: parcela, fechas y grado se pliegan detrás de "Filtros (n)" */
 @media (max-width: 47.99rem) {
   .filtros__fila {
     flex-wrap: wrap;

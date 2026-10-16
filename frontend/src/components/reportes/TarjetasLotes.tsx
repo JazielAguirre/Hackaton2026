@@ -1,6 +1,6 @@
 import { navegar } from '../../hooks/useRuta'
 import { formatFechaLarga, formatFrutos, formatPct, NOMBRE_ESTADO, type LoteReporte } from '../../utils/dominio'
-import { nombreCultivo, rutaLote, type Grupo } from '../../utils/reportes'
+import { nombreCultivo, nombreParcela, rutaLote, type Grupo } from '../../utils/reportes'
 import { BarraDestinos } from './BarraDestinos'
 import { EnlaceLote } from './EnlaceLote'
 import { GradoInsignia } from './GradoInsignia'
@@ -22,7 +22,7 @@ export function TarjetasLotes({ grupos, onDescargarPdf }: TarjetasLotesProps) {
           <ul className="tarjetas-lotes__lista">
             {grupo.lotes.map((lote) => {
               const analizado = lote.estado === 'analizado' && lote.analisis_id !== null
-              const titulo = `${nombreCultivo(lote.fruta_principal)} · ${lote.parcela ?? lote.zona_nombre ?? 'Sin parcela'}`
+              const titulo = `${nombreCultivo(lote.fruta_principal)} · ${nombreParcela(lote)}`
               const acciones: Accion[] = [
                 { etiqueta: 'Ver', icono: 'ver', onSelect: () => navegar(rutaLote(lote.id), { estado: { desdeLista: true } }) },
               ]

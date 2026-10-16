@@ -1,0 +1,21 @@
+# Servicio de inferencia (modelos de ML). La API lo llama por HTTP en INFERENCIA_URL.
+# Levantar: docker compose up -d --build inferencia
+services:
+  inferencia:
+    build: ./inferencia
+    image: fruitscan-inferencia:latest
+    container_name: fruitscan-inferencia
+    restart: unless-stopped
+    # Solo accesible desde esta máquina: no tiene autenticación.
+    ports:
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - ./api/models:/app/models:ro
+      # Misma fuente que usa ml/ para entrenar: no se copia a mano.
+      - ./ml/config/mapeo_clases.json:/app/mapeo_clases.json:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/salud')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3

@@ -10,9 +10,14 @@ from uuid import UUID  # noqa: E402
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.deps import Usuario, cliente_usuario, usuario_actual  # noqa: E402
+from app.deps import Usuario, cliente_admin, cliente_usuario, usuario_actual  # noqa: E402
 from app.main import app  # noqa: E402
-from tests.fakes import FakeSupabase  # noqa: E402
+from app.services.inferencia import (  # noqa: E402
+    FrutoDetectado,
+    ResultadoInferencia,
+    cliente_inferencia,
+)
+from tests.fakes import FakeStorage, FakeSupabase  # noqa: E402
 
 USUARIO = Usuario(
     id=UUID("11111111-1111-1111-1111-111111111111"),
@@ -33,6 +38,11 @@ def catalogos() -> dict[str, list[dict]]:
         "clases": [
             {"id": 1, "fruta_id": "mango", "codigo": "sano", "nombre": "Sano"},
             {"id": 2, "fruta_id": "mango", "codigo": "antracnosis", "nombre": "Antracnosis"},
+            {"id": 3, "fruta_id": "mango", "codigo": "otro_defecto", "nombre": "Otro defecto"},
+            {"id": 4, "fruta_id": "jitomate", "codigo": "sano", "nombre": "Sano"},
+            {"id": 5, "fruta_id": "jitomate", "codigo": "pudricion_mancha", "nombre": "Pudrición o mancha"},
+            {"id": 6, "fruta_id": "fresa", "codigo": "sana", "nombre": "Sana"},
+            {"id": 7, "fruta_id": "fresa", "codigo": "moho_gris", "nombre": "Moho gris"},
         ],
         "zonas": [
             {"id": 1, "nombre": "Valle", "activa": True},
@@ -58,9 +68,53 @@ def bd() -> FakeSupabase:
 
 
 @pytest.fixture
-def cliente(bd: FakeSupabase):
-    """API con sesión iniciada como USUARIO y la base de datos falsa."""
+def admin(bd: FakeSupabase) -> FakeSupabase:
+    """La service role: ve las mismas tablas y archivos que `bd`, pero sin RLS."""
+    otro = FakeSupabase(None)
+    otro.tablas = bd.tablas
+    otro.storage = FakeStorage(None)
+    otro.storage.objetos = bd.storage.objetos
+    return otro
+
+
+def detectado(fruta: str = "mango", clase_bd: str | None = "sano", conf: float | None = 0.9, **caja) -> FrutoDetectado:
+    return FrutoDetectado(
+        fruta=fruta,
+        caja_x=caja.get("x", 0.1), caja_y=caja.get("y", 0.2),
+        caja_ancho=caja.get("ancho", 0.3), caja_alto=caja.get("alto", 0.25),
+        conf_deteccion=0.88, clase_bd=clase_bd, conf_clasificacion=conf if clase_bd else None,
+    )
+
+
+class InferenciaFalsa:
+    """Devuelve una lista de frutos por cada foto (en orden); una excepción simula un fallo."""
+
+    def __init__(self) -> None:
+        self.por_foto: list[list[FrutoDetectado] | Exception] = []
+        self.imagenes: list[bytes] = []
+        # La fruta que se mandó con cada foto (None si el lote no tenía fruta).
+        self.frutas: list[str | None] = []
+
+    def inferir(self, imagen: bytes, fruta: str | None = None) -> ResultadoInferencia:
+        resultado = self.por_foto[len(self.imagenes)]
+        self.imagenes.append(imagen)
+        self.frutas.append(fruta)
+        if isinstance(resultado, Exception):
+            raise resultado
+        return ResultadoInferencia(frutos=resultado, modelo_version="prueba123")
+
+
+@pytest.fixture
+def inferencia() -> InferenciaFalsa:
+    return InferenciaFalsa()
+
+
+@pytest.fixture
+def cliente(bd: FakeSupabase, admin: FakeSupabase, inferencia: InferenciaFalsa):
+    """API con sesión iniciada como USUARIO, la base de datos falsa y la inferencia falsa."""
     app.dependency_overrides[usuario_actual] = lambda: USUARIO
     app.dependency_overrides[cliente_usuario] = lambda: bd
+    app.dependency_overrides[cliente_admin] = lambda: admin
+    app.dependency_overrides[cliente_inferencia] = lambda: inferencia
     yield TestClient(app)
     app.dependency_overrides.clear()

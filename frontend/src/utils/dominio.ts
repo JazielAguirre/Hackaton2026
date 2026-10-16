@@ -5,6 +5,7 @@ export type Destino = Database['public']['Enums']['destino']
 export type Grado = Database['public']['Enums']['grado_lote']
 export type LoteBitacora = Tables<'bitacora_lotes'>
 export type Zona = Tables<'zonas'>
+export type Parcela = Tables<'parcelas'>
 export type AlertaComunitaria = Database['public']['Functions']['alertas_comunitarias']['Returns'][number]
 
 /** Orden fijo de destinos y su color (CLAUDE.md: verde, amarillo, naranja, rojo, gris). */
@@ -46,6 +47,15 @@ export const NOMBRE_CLASE: Record<string, string> = {
 
 /** Clases sanas (clases.es_sana). Todo lo demás cuenta como defecto. */
 export const CLASES_SANAS: ReadonlySet<string> = new Set(['sano', 'sana'])
+
+/** Minutos en `analizando` tras los que se da por caído el análisis (igual que ANALISIS_VENCIDO_MINUTOS en la API). */
+export const MINUTOS_ANALISIS_VENCIDO = 10
+
+/** Un lote en `error`, o en `analizando` desde hace demasiado, ya no avanza solo: hay que reintentar. */
+export function analisisDetenido(lote: { estado: string; updated_at: string }): boolean {
+  if (lote.estado === 'error') return true
+  return lote.estado === 'analizando' && Date.now() - new Date(lote.updated_at).getTime() > MINUTOS_ANALISIS_VENCIDO * 60_000
+}
 
 export const NOMBRE_ESTADO: Record<Database['public']['Enums']['estado_lote'], string> = {
   borrador: 'Sin analizar',
@@ -90,6 +100,8 @@ export type LoteDetalle = Tables<'lotes'> & {
 /** Renglón de Reportes: la vista bitacora_lotes + frutos por destino (conteo de la tabla frutos). */
 export type LoteReporte = LoteBitacora & {
   id: string
+  /** Viene de la API (la vista no lo trae); null en los lotes viejos sin parcela. */
+  parcela_id: string | null
   frutos_por_destino: Record<Destino, number> | null
 }
 
