@@ -4,6 +4,7 @@ import type { Database, Tables } from '../types/database'
 export type Destino = Database['public']['Enums']['destino']
 export type Grado = Database['public']['Enums']['grado_lote']
 export type LoteBitacora = Tables<'bitacora_lotes'>
+export type Zona = Tables<'zonas'>
 export type AlertaComunitaria = Database['public']['Functions']['alertas_comunitarias']['Returns'][number]
 
 /** Orden fijo de destinos y su color (CLAUDE.md: verde, amarillo, naranja, rojo, gris). */
