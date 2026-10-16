@@ -90,8 +90,7 @@ export function NuevoConectado() {
   const parcelas = useConsulta(leerParcelas)
 
   async function enviar(lote: NuevoLote) {
-    const { fotos, ...datos } = lote
-    const id = await enviarLote(datos, fotos)
+    const id = await enviarLote({ nombre: lote.nombre, fecha_cosecha: lote.fecha_cosecha, parcela_id: lote.parcela_id }, lote.fotos)
     navegar(rutaLote(id))
   }
 

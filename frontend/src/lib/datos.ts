@@ -44,7 +44,7 @@ export async function crearParcela(nueva: NuevaParcela): Promise<void> {
   if (error) throw new Error(error.code === '23505' ? MENSAJE_NOMBRE_REPETIDO : 'No pudimos guardar la parcela. Intenta de nuevo.')
 }
 
-type NuevoLoteApi = { nombre: string; fruta_principal: string; fecha_cosecha: string; parcela_id: string }
+type NuevoLoteApi = { nombre: string; fecha_cosecha: string; parcela_id: string }
 
 /**
  * Crea el lote, sube sus fotos e inicia el análisis (que sigue en segundo plano).
