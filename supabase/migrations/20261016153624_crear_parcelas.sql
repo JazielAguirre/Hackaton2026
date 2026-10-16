@@ -1,10 +1,5 @@
 -- Parcelas de cada productor: las registra una vez y luego las elige al crear un lote.
 -- lotes.parcela (texto libre) se queda por ahora; la web y la API no cambian todavía.
---
--- PENDIENTE DE APLICAR (2026-10-15). Aplicar con el MCP de Supabase (apply_migration,
--- nombre "crear_parcelas") en el proyecto dylcucrhjxshpjqftgbe. Si la versión que asigna
--- Supabase es otra, renombrar este archivo con esa versión. Después: regenerar
--- frontend/src/types/database.ts y actualizar supabase/esquema_completo.sql.
 
 -- ============ Tabla parcelas ============
 create table public.parcelas (
@@ -53,3 +48,35 @@ alter table public.lotes
   foreign key (parcela_id, usuario_id) references public.parcelas (id, usuario_id);
 
 create index lotes_parcela_id_idx on public.lotes (parcela_id);
+
+-- ============ Lotes: la zona sale de la parcela ============
+-- alertas_comunitarias() y bitacora_lotes agrupan por lotes.zona_id. Si la parcela
+-- tiene zona, el lote usa esa; si el lote dice otra, es un error.
+create function public.completar_zona_desde_parcela()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_zona integer;
+begin
+  if new.parcela_id is not null then
+    select p.zona_id into v_zona from public.parcelas p where p.id = new.parcela_id;
+    if v_zona is not null then
+      if new.zona_id is null then
+        new.zona_id := v_zona;
+      elsif new.zona_id <> v_zona then
+        raise exception 'El lote dice zona % pero su parcela está en la zona %', new.zona_id, v_zona;
+      end if;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function public.completar_zona_desde_parcela() from public, anon, authenticated;
+
+create trigger lotes_completar_zona
+  before insert or update of parcela_id, zona_id on public.lotes
+  for each row execute function public.completar_zona_desde_parcela();
