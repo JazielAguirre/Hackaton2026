@@ -5,6 +5,7 @@ export type Destino = Database['public']['Enums']['destino']
 export type Grado = Database['public']['Enums']['grado_lote']
 export type LoteBitacora = Tables<'bitacora_lotes'>
 export type Zona = Tables<'zonas'>
+export type Parcela = Tables<'parcelas'>
 export type AlertaComunitaria = Database['public']['Functions']['alertas_comunitarias']['Returns'][number]
 
 /** Orden fijo de destinos y su color (CLAUDE.md: verde, amarillo, naranja, rojo, gris). */
@@ -99,6 +100,8 @@ export type LoteDetalle = Tables<'lotes'> & {
 /** Renglón de Reportes: la vista bitacora_lotes + frutos por destino (conteo de la tabla frutos). */
 export type LoteReporte = LoteBitacora & {
   id: string
+  /** Viene de la API (la vista no lo trae); null en los lotes viejos sin parcela. */
+  parcela_id: string | null
   frutos_por_destino: Record<Destino, number> | null
 }
 

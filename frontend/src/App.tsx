@@ -13,14 +13,14 @@ import {
   DetalleConectado,
   InicioConectado,
   NuevoConectado,
+  ParcelaDetalleConectado,
+  ParcelasConectado,
   ReportesConectado,
-  ZonaDetalleConectado,
-  ZonasConectado,
 } from './pages/conectadas'
 import type { LoteBitacora } from './utils/dominio'
 
 const RUTA_DETALLE = /^\/reportes\/lote\/([^/]+)\/?$/
-const RUTA_ZONA = /^\/zonas\/(\d+)\/?$/
+const RUTA_PARCELA = /^\/parcelas\/([^/]+)\/?$/
 
 export default function App() {
   const { theme, toggleTheme } = useTheme()
@@ -71,18 +71,18 @@ export default function App() {
 
   // La URL decide la pantalla, así un enlace a un lote se puede compartir y recargar
   const detalle = RUTA_DETALLE.exec(path)
-  const zonaRuta = RUTA_ZONA.exec(path)
-  const activo: NavId = path === '/nuevo' ? 'nuevo' : path.startsWith('/reportes') ? 'reportes' : path.startsWith('/zonas') ? 'zonas' : 'inicio'
+  const parcelaRuta = RUTA_PARCELA.exec(path)
+  const activo: NavId = path === '/nuevo' ? 'nuevo' : path.startsWith('/reportes') ? 'reportes' : path.startsWith('/parcelas') ? 'parcelas' : 'inicio'
 
   let pagina
   if (detalle) {
     pagina = <DetalleConectado id={decodeURIComponent(detalle[1])} onDescargarPdf={handleDescargarReporte} />
   } else if (path === '/reportes' || path === '/reportes/') {
     pagina = <ReportesConectado onDescargarPdf={handleDescargarReporte} />
-  } else if (zonaRuta) {
-    pagina = <ZonaDetalleConectado id={Number(zonaRuta[1])} />
-  } else if (path === '/zonas' || path === '/zonas/') {
-    pagina = <ZonasConectado />
+  } else if (parcelaRuta) {
+    pagina = <ParcelaDetalleConectado id={decodeURIComponent(parcelaRuta[1])} onDescargarPdf={handleDescargarReporte} />
+  } else if (path === '/parcelas' || path === '/parcelas/') {
+    pagina = <ParcelasConectado />
   } else if (path === '/nuevo') {
     pagina = <NuevoConectado />
   } else {

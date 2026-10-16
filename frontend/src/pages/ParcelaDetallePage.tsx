@@ -1,4 +1,3 @@
-import { AlertasZona } from '../components/dashboard/AlertasZona'
 import { DestinoChart } from '../components/dashboard/DestinoChart'
 import { GradoChart } from '../components/dashboard/GradoChart'
 import { StatTile } from '../components/dashboard/StatTile'
@@ -8,60 +7,63 @@ import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
 import { Grupo, Panel } from '../components/ui/Panel'
 import { navegar, regresarA } from '../hooks/useRuta'
-import { formatFechaLarga, formatFrutos, formatNumero, formatPct, NOMBRE_CLASE, NOMBRE_ESTADO, NOMBRE_FRUTA } from '../utils/dominio'
+import { formatFechaLarga, formatFrutos, formatNumero, formatPct, NOMBRE_CLASE, NOMBRE_ESTADO, NOMBRE_FRUTA, type LoteReporte } from '../utils/dominio'
 import { nombreCultivo } from '../utils/reportes'
-import type { ResumenZona } from '../utils/zonas'
+import { ubicacion, type ResumenParcela } from '../utils/parcelas'
 import '../styles/home.css'
 import '../styles/reportes.css'
 import '../styles/detalle-lote.css'
-import '../styles/zonas.css'
+import '../styles/parcelas.css'
 
-type ZonaDetallePageProps = {
-  resumen: ResumenZona | null
+type ParcelaDetallePageProps = {
+  resumen: ResumenParcela | null
+  onDescargarPdf?: (lote: LoteReporte) => void
   esEjemplo?: boolean
 }
 
-export function ZonaDetallePage({ resumen, esEjemplo = false }: ZonaDetallePageProps) {
+export function ParcelaDetallePage({ resumen, onDescargarPdf, esEjemplo = false }: ParcelaDetallePageProps) {
   if (!resumen) {
     return (
       <div className="detalle detalle--vacio">
         <span className="placeholder__icon">
-          <Icon name="zona" size={28} />
+          <Icon name="parcela" size={28} />
         </span>
-        <h1 className="placeholder__title">No encontramos la zona</h1>
-        <p className="placeholder__text">Puede que el enlace esté incompleto o que la zona ya no exista.</p>
-        <Button onClick={() => navegar('/zonas')}>Ir a Zonas</Button>
+        <h1 className="placeholder__title">No encontramos la parcela</h1>
+        <p className="placeholder__text">Puede que el enlace esté incompleto o que la parcela ya no exista.</p>
+        <Button onClick={() => navegar('/parcelas')}>Ir a Parcelas</Button>
       </div>
     )
   }
 
-  const { zona, lotes, analizados, porGrado, porDestino, defectos, alertas } = resumen
+  const { parcela, lotes, analizados, porGrado, porDestino, defectos } = resumen
   const enProceso = lotes.length - analizados
   const totalDefectos = defectos.reduce((s, d) => s + d.n, 0)
   const ordenados = [...lotes].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
 
   return (
     <div className="detalle">
-      <button type="button" className="detalle__volver" onClick={() => regresarA('/zonas')}>
+      <button type="button" className="detalle__volver" onClick={() => regresarA('/parcelas')}>
         <Icon name="regresar" size={18} />
-        Zonas
+        Parcelas
       </button>
 
-      <header className="zona-header">
-        <span className="zona-header__icono" aria-hidden="true">
-          <Icon name="zona" size={30} />
+      <header className="parcela-header">
+        <span className="parcela-header__icono" aria-hidden="true">
+          <Icon name="parcela" size={30} />
         </span>
         <div>
           <p className="detalle__grado">
-            {zona.activa ? 'Zona activa' : 'Zona inactiva'}
+            {parcela.activa ? 'Parcela activa' : 'Parcela inactiva'}
             {esEjemplo && <span className="demo-pill">Datos de ejemplo</span>}
           </p>
-          <h1 className="detalle__title">{zona.nombre}</h1>
-          <p className="detalle__meta">{[zona.municipio, zona.estado].filter(Boolean).join(', ') || 'Sin municipio registrado'}</p>
+          <h1 className="detalle__title">{parcela.nombre}</h1>
+          <p className="detalle__meta">
+            {lotes.length} {lotes.length === 1 ? 'lote' : 'lotes'} · {ubicacion(parcela)}
+          </p>
         </div>
       </header>
 
-      <section aria-label="Indicadores de la zona">
+      <section aria-label="Indicadores de la parcela">
         <div className="stats">
           <StatTile label="Lotes analizados" value={formatNumero(analizados)} detail={enProceso ? `${enProceso} sin terminar` : undefined} />
           <StatTile label="Frutos clasificados" value={formatNumero(resumen.frutosClasificados)} />
@@ -71,9 +73,9 @@ export function ZonaDetallePage({ resumen, esEjemplo = false }: ZonaDetallePageP
       </section>
 
       {analizados === 0 ? (
-        <div className="card zona-vacia">
+        <div className="card parcela-vacia">
           <Icon name="reporte" size={28} />
-          <p>Esta zona todavía no tiene lotes analizados. Cuando un productor analice un lote aquí, verás sus resultados.</p>
+          <p>Esta parcela todavía no tiene lotes analizados. Cuando analices un lote de esta parcela, verás sus resultados.</p>
         </div>
       ) : (
         <>
@@ -87,7 +89,7 @@ export function ZonaDetallePage({ resumen, esEjemplo = false }: ZonaDetallePageP
           </Grupo>
 
           <Grupo titulo="Sanidad">
-            <Panel titulo="Defectos más frecuentes" subtitulo="Frutos con cada defecto en la zona">
+            <Panel titulo="Defectos más frecuentes" subtitulo="Frutos con cada defecto en la parcela">
               {defectos.length ? (
                 <ul className="defectos">
                   {defectos.slice(0, 6).map((d) => (
@@ -102,70 +104,68 @@ export function ZonaDetallePage({ resumen, esEjemplo = false }: ZonaDetallePageP
                   ))}
                 </ul>
               ) : (
-                <p className="empty">No se encontraron defectos en esta zona.</p>
+                <p className="empty">No se encontraron defectos en esta parcela.</p>
               )}
-            </Panel>
-            <Panel titulo="Alertas de la zona" subtitulo="Defectos repetidos en varios lotes en los últimos 7 días">
-              <AlertasZona alertas={alertas} />
             </Panel>
           </Grupo>
         </>
       )}
 
       <Grupo titulo="Registro">
-        <Panel titulo="Lotes de la zona" subtitulo={lotes.length ? `${lotes.length} en total` : undefined}>
+        <Panel titulo="Lotes de la parcela" subtitulo={lotes.length ? `${lotes.length} en total` : undefined}>
           {ordenados.length ? (
-            <ul className="lotes-zona">
+            <ul className="lotes-parcela">
               {ordenados.map((l) => {
                 const listo = l.estado === 'analizado' && l.analisis_id !== null
                 return (
-                  <li key={l.id} className="lotes-zona__fila">
+                  <li key={l.id} className="lotes-parcela__fila">
                     <GradoInsignia grado={l.grado} estado={l.estado} tamano="sm" />
-                    <div className="lotes-zona__info">
-                      <EnlaceLote id={l.id} className="lotes-zona__nombre">
-                        {nombreCultivo(l.fruta_principal)} · {l.parcela ?? 'Sin parcela'}
+                    <div className="lotes-parcela__info">
+                      <EnlaceLote id={l.id} className="lotes-parcela__nombre">
+                        {l.nombre}
                       </EnlaceLote>
                       <span className="tabla-lotes__sub">
-                        {l.nombre} · {formatFechaLarga(l.fecha_cosecha)}
+                        {nombreCultivo(l.fruta_principal)} · {formatFechaLarga(l.fecha_cosecha)}
                       </span>
                     </div>
-                    <span className="lotes-zona__valor">{listo ? `${formatPct(l.pct_sanos)} sanos` : l.estado ? NOMBRE_ESTADO[l.estado] : ''}</span>
+                    <span className="lotes-parcela__valor">{listo ? `${formatPct(l.pct_sanos)} sanos` : l.estado ? NOMBRE_ESTADO[l.estado] : ''}</span>
+                    {listo && onDescargarPdf && (
+                      <button
+                        type="button"
+                        className="tabla-lotes__accion"
+                        aria-label={`Descargar PDF de ${l.nombre}`}
+                        onClick={() => onDescargarPdf(l)}
+                      >
+                        <Icon name="descargar" size={18} />
+                        PDF
+                      </button>
+                    )}
                   </li>
                 )
               })}
             </ul>
           ) : (
-            <p className="empty">Todavía no hay lotes en esta zona.</p>
+            <p className="empty">Todavía no hay lotes en esta parcela.</p>
           )}
         </Panel>
 
-        <Panel titulo="Datos de la zona">
+        <Panel titulo="Datos de la parcela">
           <dl className="datos-lote">
             <div>
               <dt>Nombre</dt>
-              <dd>{zona.nombre}</dd>
-            </div>
-            <div>
-              <dt>Municipio</dt>
-              <dd>{zona.municipio ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>Estado</dt>
-              <dd>{zona.estado ?? '—'}</dd>
+              <dd>{parcela.nombre}</dd>
             </div>
             <div>
               <dt>Ubicación</dt>
-              <dd>{zona.latitud !== null && zona.longitud !== null ? `${zona.latitud}, ${zona.longitud}` : '—'}</dd>
+              <dd>{parcela.latitud !== null && parcela.longitud !== null ? `${parcela.latitud}, ${parcela.longitud}` : '—'}</dd>
             </div>
             <div>
               <dt>Último análisis</dt>
               <dd>{formatFechaLarga(resumen.ultimoAnalisis)}</dd>
             </div>
             <div>
-              <dt>ID de la zona</dt>
-              <dd>
-                <code>{zona.id}</code>
-              </dd>
+              <dt>Registrada</dt>
+              <dd>{formatFechaLarga(parcela.created_at)}</dd>
             </div>
           </dl>
         </Panel>
