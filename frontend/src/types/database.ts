@@ -88,6 +88,7 @@ export type Database = {
           fruta_id: string
           id: number
           nombre: string
+          umbral_confianza: number | null
         }
         Insert: {
           codigo: string
@@ -96,6 +97,7 @@ export type Database = {
           fruta_id: string
           id?: number
           nombre: string
+          umbral_confianza?: number | null
         }
         Update: {
           codigo?: string
@@ -104,6 +106,7 @@ export type Database = {
           fruta_id?: string
           id?: number
           nombre?: string
+          umbral_confianza?: number | null
         }
         Relationships: [
           {
@@ -345,6 +348,7 @@ export type Database = {
           longitud: number | null
           nombre: string
           parcela: string | null
+          parcela_id: string | null
           updated_at: string
           usuario_id: string
           zona_id: number | null
@@ -360,6 +364,7 @@ export type Database = {
           longitud?: number | null
           nombre: string
           parcela?: string | null
+          parcela_id?: string | null
           updated_at?: string
           usuario_id?: string
           zona_id?: number | null
@@ -375,6 +380,7 @@ export type Database = {
           longitud?: number | null
           nombre?: string
           parcela?: string | null
+          parcela_id?: string | null
           updated_at?: string
           usuario_id?: string
           zona_id?: number | null
@@ -388,7 +394,58 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lotes_parcela_del_usuario_fkey"
+            columns: ["parcela_id", "usuario_id"]
+            isOneToOne: false
+            referencedRelation: "parcelas"
+            referencedColumns: ["id", "usuario_id"]
+          },
+          {
             foreignKeyName: "lotes_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "zonas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parcelas: {
+        Row: {
+          activa: boolean
+          created_at: string
+          id: string
+          latitud: number | null
+          longitud: number | null
+          nombre: string
+          updated_at: string
+          usuario_id: string
+          zona_id: number | null
+        }
+        Insert: {
+          activa?: boolean
+          created_at?: string
+          id?: string
+          latitud?: number | null
+          longitud?: number | null
+          nombre: string
+          updated_at?: string
+          usuario_id?: string
+          zona_id?: number | null
+        }
+        Update: {
+          activa?: boolean
+          created_at?: string
+          id?: string
+          latitud?: number | null
+          longitud?: number | null
+          nombre?: string
+          updated_at?: string
+          usuario_id?: string
+          zona_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_zona_id_fkey"
             columns: ["zona_id"]
             isOneToOne: false
             referencedRelation: "zonas"
