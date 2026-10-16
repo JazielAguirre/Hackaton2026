@@ -12,10 +12,11 @@ import '../styles/home.css'
 type HomePageProps = {
   nombre: string
   onNuevoAnalisis: () => void
+  onVerReportes: () => void
   onDescargarReporte: (lote: LoteBitacora) => void
 }
 
-export function HomePage({ nombre, onNuevoAnalisis, onDescargarReporte }: HomePageProps) {
+export function HomePage({ nombre, onNuevoAnalisis, onVerReportes, onDescargarReporte }: HomePageProps) {
   const analizados = lotesEjemplo.filter((lote) => lote.estado === 'analizado')
   const enProceso = lotesEjemplo.length - analizados.length
   const sumar = (campo: 'total_frutos' | 'frutos_sanos' | 'frutos_revision') =>
@@ -50,7 +51,7 @@ export function HomePage({ nombre, onNuevoAnalisis, onDescargarReporte }: HomePa
         <div className="stats">
           <StatTile label="Lotes analizados" value={formatNumero(analizados.length)} detail={enProceso ? `${enProceso} en análisis` : undefined} />
           <StatTile label="Frutos revisados" value={formatNumero(totalFrutos)} />
-          <StatTile label="Frutos sanos" value={`${pctSanos} %`} detail="Sin contar revisión manual" />
+          <StatTile label="Frutos sanos" value={`${pctSanos}%`} detail="Sin contar revisión manual" />
           <StatTile label="Lotes en rechazo" value={formatNumero(porGrado.rechazo)} />
         </div>
       </section>
@@ -75,11 +76,16 @@ export function HomePage({ nombre, onNuevoAnalisis, onDescargarReporte }: HomePa
 
       <section id="reportes" className="home__section">
         <article className="card">
-          <header className="card__header">
-            <h2 className="card__title">Reportes recientes</h2>
-            <p className="card__subtitle">Descarga el PDF de cada lote analizado</p>
+          <header className="card__header card__header--accion">
+            <div>
+              <h2 className="card__title">Reportes recientes</h2>
+              <p className="card__subtitle">Descarga el PDF de cada lote analizado</p>
+            </div>
+            <Button variant="plain" onClick={onVerReportes}>
+              Ver todos
+            </Button>
           </header>
-          <ReporteLotes lotes={lotesEjemplo} onDescargar={onDescargarReporte} />
+          <ReporteLotes lotes={lotesEjemplo.slice(0, 5)} onDescargar={onDescargarReporte} />
         </article>
       </section>
 

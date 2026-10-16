@@ -1,27 +1,32 @@
 import { useState } from 'react'
 import { AppHeader } from './components/layout/AppHeader'
-import { NAV_ITEMS, type NavId, type Vista } from './components/layout/navegacion'
+import type { NavId } from './components/layout/navegacion'
 import { ThemeToggle } from './components/ui/ThemeToggle'
 import { usePerfil } from './hooks/usePerfil'
+import { navegar, useRuta } from './hooks/useRuta'
 import { useSesion } from './hooks/useSesion'
 import { useTheme } from './hooks/useTheme'
 import { cerrarSesion, crearCuenta, iniciarSesion } from './lib/auth'
+import { DetalleLotePage } from './pages/DetalleLotePage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage, type AuthData } from './pages/LoginPage'
 import { NuevoAnalisisPage, type NuevoLote } from './pages/NuevoAnalisisPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
-import { lotesEjemplo } from './services/datosEjemplo'
+import { ReportesPage } from './pages/ReportesPage'
+import { detalleLoteEjemplo, lotesEjemplo, lotesReporteEjemplo } from './services/datosEjemplo'
 import type { LoteBitacora } from './utils/dominio'
 
 // TODO (backend): parcelas reales del productor (lotes.parcela sin repetir); por ahora salen de los datos de ejemplo
 const PARCELAS = [...new Set(lotesEjemplo.map((lote) => lote.parcela).filter((p): p is string => Boolean(p)))]
 
+const RUTA_DETALLE = /^\/reportes\/lote\/([^/]+)\/?$/
+
 export default function App() {
   const { theme, toggleTheme } = useTheme()
   const sesion = useSesion()
   const usuario = usePerfil(sesion)
-  const [vista, setVista] = useState<Vista>('inicio')
-  const [activo, setActivo] = useState<NavId>('inicio')
+  const { path } = useRuta()
+  // Alertas es una sección de inicio: se recuerda para marcarla en el menú
+  const [seccionInicio, setSeccionInicio] = useState<'inicio' | 'alertas'>('inicio')
 
   // Al terminar bien, useSesion recibe la sesión nueva y se muestra la página principal.
   async function handleAuth(data: AuthData) {
@@ -30,7 +35,7 @@ export default function App() {
   }
 
   // TODO (backend): GET /lotes/{id}/reporte.pdf
-  function handleDescargarReporte(lote: LoteBitacora) {
+  function handleDescargarReporte(lote: Pick<LoteBitacora, 'id'>) {
     console.info('Descargar reporte PDF del lote', lote.id)
   }
 
@@ -40,15 +45,14 @@ export default function App() {
     throw new Error('El envío a la API todavía no está conectado. Tus datos no se guardaron.')
   }
 
-  function navegar(id: NavId) {
-    setActivo(id)
-    if (id === 'nuevo' || id === 'bitacora') {
-      setVista(id)
-      window.scrollTo({ top: 0 })
+  function navegarMenu(id: NavId) {
+    if (id === 'nuevo' || id === 'reportes') {
+      navegar(`/${id}`)
       return
     }
-    // Reportes y alertas son secciones de inicio: se muestra inicio y se baja a la sección
-    setVista('inicio')
+    // Inicio y alertas viven en la página principal: se muestra y se baja a la sección
+    setSeccionInicio(id)
+    if (path !== '/') navegar('/')
     requestAnimationFrame(() => {
       const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
       const destino = id === 'inicio' ? null : document.getElementById(id)
@@ -58,8 +62,8 @@ export default function App() {
   }
 
   async function salir() {
-    setVista('inicio')
-    setActivo('inicio')
+    navegar('/')
+    setSeccionInicio('inicio')
     try {
       await cerrarSesion() // useSesion pasa a null y vuelve el login
     } catch (error) {
@@ -79,7 +83,30 @@ export default function App() {
     )
   }
 
-  const item = NAV_ITEMS.find((navItem) => navItem.id === vista)
+  // La URL decide la pantalla, así un enlace a un lote se puede compartir y recargar
+  const detalle = RUTA_DETALLE.exec(path)
+  const activo: NavId = path === '/nuevo' ? 'nuevo' : path.startsWith('/reportes') ? 'reportes' : seccionInicio
+
+  let pagina
+  if (detalle) {
+    // TODO (backend): GET /lotes/{id}
+    const lote = detalleLoteEjemplo(decodeURIComponent(detalle[1]))
+    pagina = <DetalleLotePage lote={lote} esEjemplo onDescargarPdf={handleDescargarReporte} />
+  } else if (path === '/reportes' || path === '/reportes/') {
+    // TODO (backend): vista bitacora_lotes + conteo de frutos por destino
+    pagina = <ReportesPage lotes={lotesReporteEjemplo} esEjemplo onDescargarPdf={handleDescargarReporte} />
+  } else if (path === '/nuevo') {
+    pagina = <NuevoAnalisisPage parcelas={PARCELAS} onSubmit={handleNuevoLote} onCancelar={() => navegar('/')} />
+  } else {
+    pagina = (
+      <HomePage
+        nombre={usuario.nombre}
+        onNuevoAnalisis={() => navegar('/nuevo')}
+        onVerReportes={() => navegar('/reportes')}
+        onDescargarReporte={handleDescargarReporte}
+      />
+    )
+  }
 
   return (
     <>
@@ -88,18 +115,10 @@ export default function App() {
         activo={activo}
         theme={theme}
         onToggleTheme={toggleTheme}
-        onNavigate={navegar}
+        onNavigate={navegarMenu}
         onLogout={salir}
       />
-      <main className="app-main">
-        {vista === 'inicio' || !item ? (
-          <HomePage nombre={usuario.nombre} onNuevoAnalisis={() => navegar('nuevo')} onDescargarReporte={handleDescargarReporte} />
-        ) : vista === 'nuevo' ? (
-          <NuevoAnalisisPage parcelas={PARCELAS} onSubmit={handleNuevoLote} onCancelar={() => navegar('inicio')} />
-        ) : (
-          <PlaceholderPage titulo={item.label} icon={item.icon} onVolver={() => navegar('inicio')} />
-        )}
-      </main>
+      <main className="app-main">{pagina}</main>
     </>
   )
 }

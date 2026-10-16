@@ -307,7 +307,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .app-header {
-    background: var(--color-bg);
+    background: var(--color-surface-solid);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
