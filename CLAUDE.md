@@ -56,7 +56,7 @@ Configuración inicial: `umbral_confianza` 0.60, `min_frutos_muestra` 30, `alert
 - El detector distingue mango, jitomate y fresa: cada caja se clasifica con el clasificador de la fruta que dio el detector y el lote toma la fruta que más se detectó. La web no pide la fruta; si un lote creado por la API trae `fruta_principal`, la API la manda a `/inferir` (campo `fruta`) y todas sus cajas usan ese clasificador. Detalle en `inferencia/README.md`.
 - Dividir entrenamiento, validación y prueba ANTES de aumentar datos. Las imágenes sintéticas del dataset de fresa van solo en entrenamiento.
 - Las cajas de fresa para el detector se generan con un script a partir de las máscaras de sus datasets.
-- Pesos en `api/models/`. No subir archivos grandes al repo; documentar de dónde se descargan.
+- Pesos en `api/models/` (van en git, unos 15 MB; están ignorados por `*.pt`, así que un peso nuevo se agrega con `git add -f`). No subir archivos de más de 50 MB. Lista en `api/models/README.md`.
 - Datasets: MangoDHDS, MangoFruitBD, Tomato Pathologies, INDTomatoMSTD, TFDD, Tomato Disease (Sichuan), Strawberry Disease (Mendeley), Strawberry Disease Detection. Citarlos en README.md.
 
 ## Sugerencias y contenido agronómico
