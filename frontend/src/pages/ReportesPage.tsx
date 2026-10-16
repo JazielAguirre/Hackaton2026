@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FiltrosReportes } from '../components/reportes/FiltrosReportes'
 import { MenuAcciones } from '../components/reportes/MenuAcciones'
 import { TablaLotes } from '../components/reportes/TablaLotes'
@@ -103,19 +103,8 @@ export function ReportesPage({ lotes, esEjemplo = false, onDescargarPdf }: Repor
 
   const limpiar = () => cambiarFiltros(sinFiltros(filtros))
 
-  // La altura de la barra fija se usa para pegar el encabezado de la tabla justo debajo
-  const filtrosRef = useRef<HTMLDivElement>(null)
-  const [altoFiltros, setAltoFiltros] = useState(0)
-  useEffect(() => {
-    const barra = filtrosRef.current
-    if (!barra) return
-    const observador = new ResizeObserver(([entrada]) => setAltoFiltros(entrada.borderBoxSize[0]?.blockSize ?? 0))
-    observador.observe(barra)
-    return () => observador.disconnect()
-  }, [])
-
   return (
-    <div className="reportes-page" style={{ '--filtros-alto': `${altoFiltros}px` } as CSSProperties}>
+    <div className="reportes-page">
       <header className="reportes-page__header">
         <div>
           <h1 className="reportes-page__title">Reportes</h1>
@@ -138,7 +127,7 @@ export function ReportesPage({ lotes, esEjemplo = false, onDescargarPdf }: Repor
         </MenuAcciones>
       </header>
 
-      <div ref={filtrosRef} className="reportes-page__filtros">
+      <div className="reportes-page__filtros">
         <FiltrosReportes
           filtros={filtros}
           opciones={opciones}
