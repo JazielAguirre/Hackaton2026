@@ -1,5 +1,6 @@
-import type { LoteDetalle, LoteReporte, Zona, AlertaComunitaria } from '../utils/dominio'
-import type { NuevaZona } from '../components/zonas/RegistrarZona'
+import type { LoteDetalle, LoteReporte, Parcela, AlertaComunitaria } from '../utils/dominio'
+import type { NuevaParcela } from '../components/parcelas/RegistrarParcela'
+import { MENSAJE_NOMBRE_REPETIDO } from '../utils/parcelas'
 import { apiGet, apiPost, apiPostForm } from './api'
 import { supabase } from './supabase'
 
@@ -20,12 +21,6 @@ export async function leerBitacora(): Promise<LoteReporte[]> {
 
 export const leerLote = (id: string) => apiGet<LoteDetalle>(`/lotes/${encodeURIComponent(id)}`)
 
-export async function leerZonas(): Promise<Zona[]> {
-  const { data, error } = await supabase.from('zonas').select('*').order('nombre')
-  if (error) throw new Error('No pudimos leer las zonas.')
-  return data
-}
-
 /** Alertas de toda la comunidad (la función agrega lotes de todos los usuarios, sin datos personales). */
 export async function leerAlertas(): Promise<AlertaComunitaria[]> {
   const { data, error } = await supabase.rpc('alertas_comunitarias')
@@ -33,22 +28,23 @@ export async function leerAlertas(): Promise<AlertaComunitaria[]> {
   return data
 }
 
-/** Solo acopio y técnico pueden; a un productor la API le responde 403 con su mensaje. */
-export const crearZona = (zona: NuevaZona) => apiPost<Zona>('/zonas', zona)
-
 /** Vuelve a lanzar el análisis de un lote en `error` o atascado en `analizando` (la API borra los restos). */
 export const reintentarAnalisis = (id: string) => apiPost(`/lotes/${encodeURIComponent(id)}/analizar`)
 
-export type Parcela = { id: string; nombre: string }
-
 /** Parcelas activas del usuario (RLS solo deja ver las suyas). */
 export async function leerParcelas(): Promise<Parcela[]> {
-  const { data, error } = await supabase.from('parcelas').select('id, nombre').eq('activa', true).order('nombre')
+  const { data, error } = await supabase.from('parcelas').select('*').eq('activa', true).order('nombre')
   if (error) throw new Error('No pudimos leer tus parcelas.')
   return data
 }
 
-type NuevoLoteApi = { nombre: string; fecha_cosecha: string; parcela_id?: string }
+/** Registra una parcela del usuario (usuario_id lo pone la base). El nombre es único por usuario. */
+export async function crearParcela(nueva: NuevaParcela): Promise<void> {
+  const { error } = await supabase.from('parcelas').insert(nueva)
+  if (error) throw new Error(error.code === '23505' ? MENSAJE_NOMBRE_REPETIDO : 'No pudimos guardar la parcela. Intenta de nuevo.')
+}
+
+type NuevoLoteApi = { nombre: string; fecha_cosecha: string; parcela_id: string }
 
 /**
  * Crea el lote, sube sus fotos e inicia el análisis (que sigue en segundo plano).

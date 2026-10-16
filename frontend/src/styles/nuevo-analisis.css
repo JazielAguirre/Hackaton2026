@@ -63,6 +63,19 @@
   gap: var(--space-3);
 }
 
+/* Aviso cuando el usuario aún no tiene parcelas */
+.nuevo__sin-parcelas {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  grid-column: 1 / -1;
+}
+
+.nuevo__sin-parcelas-texto {
+  margin: 0;
+  font-weight: 600;
+}
+
 /* ---------- Fotos ---------- */
 
 .fotos-lote {

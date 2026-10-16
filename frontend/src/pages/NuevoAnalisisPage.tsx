@@ -12,16 +12,18 @@ import '../styles/nuevo-analisis.css'
  */
 export type NuevoLote = {
   nombre: string
-  parcela: string | null
+  parcela_id: string
   fecha_cosecha: string
   fotos: File[]
 }
 
 type NuevoAnalisisPageProps = {
-  /** Parcelas del productor para el select (sin repetir). */
-  parcelas: readonly string[]
+  /** Parcelas activas del productor para el select. */
+  parcelas: readonly { id: string; nombre: string }[]
   onSubmit: (lote: NuevoLote) => Promise<void>
   onCancelar: () => void
+  /** Sin parcelas no se puede analizar: lleva a registrar una. */
+  onRegistrarParcela: () => void
 }
 
 /** Fecha local en formato AAAA-MM-DD (no UTC, para que no cambie de día en la noche). */
@@ -32,8 +34,9 @@ function fechaLocal(fecha: Date): string {
 
 const formatoNombre = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 
-export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar }: NuevoAnalisisPageProps) {
-  const [parcela, setParcela] = useState('')
+export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar, onRegistrarParcela }: NuevoAnalisisPageProps) {
+  const [parcelaId, setParcelaId] = useState('')
+  const [errorParcela, setErrorParcela] = useState<string>()
   const [hoy] = useState(() => fechaLocal(new Date()))
   const [fechaCosecha, setFechaCosecha] = useState(hoy)
   const [fotos, setFotos] = useState<FotoLocal[]>([])
@@ -66,10 +69,10 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar }: NuevoAnali
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (fotos.length === 0) {
-      setErrorFotos('Agrega al menos una foto.')
-      return
-    }
+    // Cada lote pertenece a una parcela; se revisa todo junto para mostrar los dos avisos a la vez
+    if (!parcelaId) setErrorParcela('Elige la parcela del lote.')
+    if (fotos.length === 0) setErrorFotos('Agrega al menos una foto.')
+    if (!parcelaId || fotos.length === 0) return
 
     const ahora = new Date()
     setEnviando(true)
@@ -77,7 +80,7 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar }: NuevoAnali
     try {
       await onSubmit({
         nombre: `Lote ${formatoNombre.format(ahora)}`,
-        parcela: parcela || null,
+        parcela_id: parcelaId,
         fecha_cosecha: fechaCosecha || hoy,
         fotos: fotos.map((foto) => foto.file),
       })
@@ -88,7 +91,8 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar }: NuevoAnali
     }
   }
 
-  const resumen = [fotos.length && `${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}`, parcela].filter(Boolean).join(' · ')
+  const nombreParcela = parcelas.find((p) => p.id === parcelaId)?.nombre
+  const resumen = [fotos.length && `${fotos.length} ${fotos.length === 1 ? 'foto' : 'fotos'}`, nombreParcela].filter(Boolean).join(' · ')
 
   return (
     <form className="nuevo" onSubmit={handleSubmit} noValidate>
@@ -106,21 +110,47 @@ export function NuevoAnalisisPage({ parcelas, onSubmit, onCancelar }: NuevoAnali
       </section>
 
       <section className="card nuevo__datos" aria-label="Datos del lote">
-        <div className="field">
-          <label className="field__label" htmlFor="parcela">
-            Parcela
-          </label>
-          <div className="field__control field__control--select">
-            <select id="parcela" className="field__input" value={parcela} onChange={(e) => setParcela(e.target.value)}>
-              <option value="">Sin parcela</option>
-              {parcelas.map((nombre) => (
-                <option key={nombre} value={nombre}>
-                  {nombre}
-                </option>
-              ))}
-            </select>
+        {parcelas.length === 0 ? (
+          <div className="nuevo__sin-parcelas" role="alert">
+            <p className="nuevo__sin-parcelas-texto">Para analizar un lote, primero registra una parcela.</p>
+            <Button variant="secundario" onClick={onRegistrarParcela}>
+              <Icon name="mas" size={18} />
+              Registrar parcela
+            </Button>
+            {errorParcela && <p className="field__message field__message--error">{errorParcela}</p>}
           </div>
-        </div>
+        ) : (
+          <div className="field" data-invalid={errorParcela ? true : undefined}>
+            <label className="field__label" htmlFor="parcela">
+              Parcela
+            </label>
+            <div className="field__control field__control--select">
+              <select
+                id="parcela"
+                className="field__input"
+                value={parcelaId}
+                aria-invalid={errorParcela ? true : undefined}
+                aria-describedby={errorParcela ? 'parcela-error' : undefined}
+                onChange={(e) => {
+                  setParcelaId(e.target.value)
+                  setErrorParcela(undefined)
+                }}
+              >
+                <option value="">Elige una parcela</option>
+                {parcelas.map((parcela) => (
+                  <option key={parcela.id} value={parcela.id}>
+                    {parcela.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {errorParcela && (
+              <p id="parcela-error" className="field__message field__message--error">
+                {errorParcela}
+              </p>
+            )}
+          </div>
+        )}
         <TextField
           label="Fecha de cosecha"
           name="fecha_cosecha"

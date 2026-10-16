@@ -1,20 +1,20 @@
 import { useEffect, type ReactNode } from 'react'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
-import type { NuevaZona } from '../components/zonas/RegistrarZona'
+import type { NuevaParcela } from '../components/parcelas/RegistrarParcela'
 import { useConsulta } from '../hooks/useConsulta'
 import { navegar } from '../hooks/useRuta'
 import { ApiError } from '../lib/api'
-import { crearZona, enviarLote, leerAlertas, leerBitacora, leerLote, leerParcelas, leerZonas, reintentarAnalisis } from '../lib/datos'
+import { crearParcela, enviarLote, leerAlertas, leerBitacora, leerLote, leerParcelas, reintentarAnalisis } from '../lib/datos'
 import { rutaLote } from '../utils/reportes'
-import { resumirZona } from '../utils/zonas'
+import { resumirParcela } from '../utils/parcelas'
 import { analisisDetenido, type AlertaComunitaria, type LoteBitacora, type LoteReporte } from '../utils/dominio'
 import { DetalleLotePage } from './DetalleLotePage'
 import { HomePage } from './HomePage'
 import { NuevoAnalisisPage, type NuevoLote } from './NuevoAnalisisPage'
+import { ParcelaDetallePage } from './ParcelaDetallePage'
+import { ParcelasPage } from './ParcelasPage'
 import { ReportesPage } from './ReportesPage'
-import { ZonaDetallePage } from './ZonaDetallePage'
-import { ZonasPage } from './ZonasPage'
 
 /*
  * Cada pantalla de Neyra recibe sus datos por props. Aquí se leen del backend al abrirla
@@ -90,17 +90,23 @@ export function NuevoConectado() {
   const parcelas = useConsulta(leerParcelas)
 
   async function enviar(lote: NuevoLote) {
-    // Las parcelas del select se identifican por nombre (único por usuario).
-    const parcelaId = parcelas.datos?.find((p) => p.nombre === lote.parcela)?.id
-    const id = await enviarLote(
-      { nombre: lote.nombre, fecha_cosecha: lote.fecha_cosecha, ...(parcelaId && { parcela_id: parcelaId }) },
-      lote.fotos,
-    )
+    const id = await enviarLote({ nombre: lote.nombre, fecha_cosecha: lote.fecha_cosecha, parcela_id: lote.parcela_id }, lote.fotos)
     navegar(rutaLote(id))
   }
 
-  // Si las parcelas no cargan, se puede analizar igual, sin parcela.
-  return <NuevoAnalisisPage parcelas={(parcelas.datos ?? []).map((p) => p.nombre)} onSubmit={enviar} onCancelar={() => navegar('/')} />
+  // Sin las parcelas no se puede elegir una, así que se espera a que carguen.
+  return (
+    <Cargando consulta={parcelas}>
+      {(lista) => (
+        <NuevoAnalisisPage
+          parcelas={lista.map((p) => ({ id: p.id, nombre: p.nombre }))}
+          onSubmit={enviar}
+          onCancelar={() => navegar('/')}
+          onRegistrarParcela={() => navegar('/parcelas?nueva=1')}
+        />
+      )}
+    </Cargando>
+  )
 }
 
 export function ReportesConectado({ onDescargarPdf }: { onDescargarPdf: (lote: LoteReporte) => void }) {
@@ -131,38 +137,32 @@ export function DetalleConectado({ id, onDescargarPdf }: { id: string; onDescarg
   return <Cargando consulta={lote}>{(datos) => <DetalleLotePage lote={datos} onDescargarPdf={onDescargarPdf} onReintentar={reintentar} />}</Cargando>
 }
 
-export function ZonasConectado() {
-  const zonas = useConsulta(leerZonas)
+export function ParcelasConectado() {
+  const parcelas = useConsulta(leerParcelas)
   const bitacora = useConsulta(leerBitacora)
-  const alertas = useConsulta(leerAlertas)
 
-  async function registrar(nueva: NuevaZona) {
-    await crearZona(nueva) // un productor recibe aquí el 403 en español; la hoja lo muestra
-    zonas.recargar()
+  async function registrar(nueva: NuevaParcela) {
+    await crearParcela(nueva) // un nombre repetido lanza su aviso en español; la hoja lo muestra
+    parcelas.recargar()
   }
 
   return (
-    <Cargando consulta={zonas}>
-      {(listaZonas) => (
-        <Cargando consulta={bitacora}>
-          {(lotes) => <ZonasPage zonas={listaZonas} lotes={lotes} alertas={alertas.datos ?? []} onRegistrar={registrar} />}
-        </Cargando>
-      )}
+    <Cargando consulta={parcelas}>
+      {(lista) => <Cargando consulta={bitacora}>{(lotes) => <ParcelasPage parcelas={lista} lotes={lotes} onRegistrar={registrar} />}</Cargando>}
     </Cargando>
   )
 }
 
-export function ZonaDetalleConectado({ id }: { id: number }) {
-  const zonas = useConsulta(leerZonas)
+export function ParcelaDetalleConectado({ id, onDescargarPdf }: { id: string; onDescargarPdf: Descargar }) {
+  const parcelas = useConsulta(leerParcelas)
   const bitacora = useConsulta(leerBitacora)
-  const alertas = useConsulta(leerAlertas)
   return (
-    <Cargando consulta={zonas}>
-      {(listaZonas) => (
+    <Cargando consulta={parcelas}>
+      {(lista) => (
         <Cargando consulta={bitacora}>
           {(lotes) => {
-            const zona = listaZonas.find((z) => z.id === id)
-            return <ZonaDetallePage resumen={zona ? resumirZona(zona, lotes, alertas.datos ?? []) : null} />
+            const parcela = lista.find((p) => p.id === id)
+            return <ParcelaDetallePage resumen={parcela ? resumirParcela(parcela, lotes) : null} onDescargarPdf={onDescargarPdf} />
           }}
         </Cargando>
       )}
