@@ -1,0 +1,20 @@
+{
+  "_descripcion": "Clases del clasificador por fruta. dataset_a_modelo: carpeta del dataset original -> clase que aprende el modelo (la usa preparar_clasificador.py). modelo_a_bd: clase del modelo -> código de clases.codigo en la base de datos (la usa la API al guardar cada fruto).",
+  "mango": {
+    "dataset": "MangoDHDS",
+    "dataset_a_modelo": {
+      "Anthracnose": "antracnosis",
+      "Stem End Rot": "pudricion_pedunculo",
+      "Healthy": "sano",
+      "Bacterial Canker": "cancro_bacteriano",
+      "Scab": "sarna"
+    },
+    "modelo_a_bd": {
+      "antracnosis": "antracnosis",
+      "pudricion_pedunculo": "pudricion_pedunculo",
+      "sano": "sano",
+      "cancro_bacteriano": "otro_defecto",
+      "sarna": "otro_defecto"
+    }
+  }
+}

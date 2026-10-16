@@ -1,0 +1,162 @@
+{
+  "split": "test",
+  "imagenes": 211,
+  "clases_modelo": {
+    "exactitud": 0.9242,
+    "f1_macro": 0.9272,
+    "matriz_confusion": {
+      "orden": "filas = clase real, columnas = clase predicha",
+      "clases": [
+        "antracnosis",
+        "cancro_bacteriano",
+        "pudricion_pedunculo",
+        "sano",
+        "sarna"
+      ],
+      "valores": [
+        [
+          37,
+          0,
+          0,
+          0,
+          3
+        ],
+        [
+          3,
+          38,
+          0,
+          0,
+          3
+        ],
+        [
+          0,
+          0,
+          44,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          37,
+          0
+        ],
+        [
+          0,
+          7,
+          0,
+          0,
+          39
+        ]
+      ]
+    },
+    "por_clase": {
+      "antracnosis": {
+        "precision": 0.925,
+        "recall": 0.925,
+        "f1": 0.925,
+        "fotos": 40
+      },
+      "cancro_bacteriano": {
+        "precision": 0.8444,
+        "recall": 0.8636,
+        "f1": 0.8539,
+        "fotos": 44
+      },
+      "pudricion_pedunculo": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "fotos": 44
+      },
+      "sano": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "fotos": 37
+      },
+      "sarna": {
+        "precision": 0.8667,
+        "recall": 0.8478,
+        "f1": 0.8571,
+        "fotos": 46
+      }
+    }
+  },
+  "clases_bd": {
+    "exactitud": 0.9716,
+    "f1_macro": 0.9729,
+    "matriz_confusion": {
+      "orden": "filas = clase real, columnas = clase predicha",
+      "clases": [
+        "antracnosis",
+        "otro_defecto",
+        "pudricion_pedunculo",
+        "sano"
+      ],
+      "valores": [
+        [
+          37,
+          3,
+          0,
+          0
+        ],
+        [
+          3,
+          87,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          44,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          37
+        ]
+      ]
+    },
+    "por_clase": {
+      "antracnosis": {
+        "precision": 0.925,
+        "recall": 0.925,
+        "f1": 0.925,
+        "fotos": 40
+      },
+      "otro_defecto": {
+        "precision": 0.9667,
+        "recall": 0.9667,
+        "f1": 0.9667,
+        "fotos": 90
+      },
+      "pudricion_pedunculo": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "fotos": 44
+      },
+      "sano": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "fotos": 37
+      }
+    }
+  },
+  "entrenamiento": {
+    "modelo_base": "yolo26n-cls.pt",
+    "epochs_pedidas": 30,
+    "epochs_completadas": 23,
+    "imgsz": 224,
+    "batch": 32,
+    "device": "cpu",
+    "segundos": 609,
+    "carpeta_run": "runs/clasificador_mango"
+  }
+}
