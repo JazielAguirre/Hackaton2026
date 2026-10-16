@@ -31,7 +31,7 @@ def analizar_lote(admin: Client, inferencia: ClienteInferencia, lote_id: UUID) -
         if not fotos:
             raise ValueError("El lote no tiene fotos válidas")
 
-        # La fruta del lote (si ya la tiene) manda sobre la del detector, que solo aprendió mango.
+        # La fruta del lote (si ya la tiene) manda sobre la del detector; la web no la pide, así que cada caja usa la que dio el detector.
         lote = admin.table("lotes").select("fruta_principal").eq("id", str(lote_id)).limit(1).execute().data
         fruta = lote[0]["fruta_principal"] if lote else None
 

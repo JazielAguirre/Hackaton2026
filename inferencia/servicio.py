@@ -71,7 +71,7 @@ def salud() -> dict:
 
 @app.post("/inferir")
 def inferir(foto: UploadFile = File(...), fruta: str | None = Form(None)) -> dict:
-    """Con `fruta`, todas las cajas se toman como esa fruta (el detector solo aprendió mango).
+    """Con `fruta`, todas las cajas se toman como esa fruta (sirve para lotes creados por la API con su fruta).
     Sin `fruta`, cada caja usa la fruta que dice el detector."""
     if fruta is not None and fruta not in FRUTAS:
         raise HTTPException(422, f"Fruta no soportada: usa {', '.join(FRUTAS)}")

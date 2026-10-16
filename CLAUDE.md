@@ -28,7 +28,7 @@ Rutas de la API: `POST /lotes`, `POST /lotes/{id}/fotos`, `POST /lotes/{id}/anal
 
 ## Base de datos (Supabase, PostgreSQL)
 - Tablas: `frutas`, `clases`, `umbrales_grado`, `configuracion`, `fichas`, `lotes`, `fotos`, `frutos`, `analisis_lote`, `sugerencias`. Vista `bitacora_lotes`. Funciones `cerrar_analisis_lote()` y `alertas_comunitarias()`. Bucket privado `fotos-lotes` con ruta `{usuario_id}/{lote_id}/{foto_id}.jpg`.
-- El destino de cada fruto lo asigna el trigger de `frutos` con `clases.destino_default` y un umbral de confianza: `clases.umbral_confianza` si la clase tiene uno propio (mango `otro_defecto`: 0.85) y, si no, `configuracion.umbral_confianza`. Bajo el umbral, el fruto va a `revision_manual`. No dupliques esa lógica en Python ni en la web.
+- El destino de cada fruto lo asigna el trigger de `frutos` con `clases.destino_default` y un umbral de confianza: `clases.umbral_confianza` si la clase tiene uno propio (mango `otro_defecto`: 0.70) y, si no, `configuracion.umbral_confianza`. Bajo el umbral, el fruto va a `revision_manual`, salvo una clase no sana con confianza entre `umbral_enfermedad_min` (0.44) y `umbral_enfermedad_max` (0.63) de `configuracion`, que va a `separar`. No dupliques esa lógica en Python ni en la web.
 - Cambios de esquema SOLO con migraciones del MCP (`apply_migration`), con copia en `supabase/migrations/<timestamp>_<descripcion>.sql`. Muestra el SQL y espera confirmación antes de aplicar. Nunca borres tablas ni datos sin permiso explícito.
 - RLS en todas las tablas. Toda tabla o función nueva lleva sus políticas y permisos en la misma migración. En funciones, revoca EXECUTE de `public` y `anon`.
 - Nombres en español, snake_case, sin acentos ni ñ.
@@ -53,7 +53,7 @@ Configuración inicial: `umbral_confianza` 0.60, `min_frutos_muestra` 30, `alert
 - Detector: YOLO nano preentrenado con 3 clases (mango, jitomate, fresa). Métrica: mAP50.
 - Clasificadores: uno por fruta, MobileNetV3 o EfficientNet-B0 con transfer learning (congelar base, entrenar cabeza, luego ajustar las últimas capas). Métricas: exactitud, F1 macro y matriz de confusión; Grad-CAM para explicar.
 - `frutos.conf_clasificacion` es la probabilidad top-1 de la clase que predice el modelo, antes de agrupar `cancro_bacteriano` y `sarna` en `otro_defecto` (mapeo en `ml/config/mapeo_clases.json`). No uses la suma de las clases agrupadas: llega a 0.99 aunque el modelo dude entre sarna y cancro, y así el umbral no atrapa las antracnosis mal clasificadas.
-- El detector solo se entrenó con mango, así que la API manda `lotes.fruta_principal` a `/inferir` (campo `fruta`) y cada caja se clasifica con el clasificador de esa fruta; sin fruta en el lote se usa la del detector. Detalle en `inferencia/README.md`.
+- El detector distingue mango, jitomate y fresa: cada caja se clasifica con el clasificador de la fruta que dio el detector y el lote toma la fruta que más se detectó. La web no pide la fruta; si un lote creado por la API trae `fruta_principal`, la API la manda a `/inferir` (campo `fruta`) y todas sus cajas usan ese clasificador. Detalle en `inferencia/README.md`.
 - Dividir entrenamiento, validación y prueba ANTES de aumentar datos. Las imágenes sintéticas del dataset de fresa van solo en entrenamiento.
 - Las cajas de fresa para el detector se generan con un script a partir de las máscaras de sus datasets.
 - Pesos en `api/models/`. No subir archivos grandes al repo; documentar de dónde se descargan.
