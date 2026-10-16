@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from app.services.inferencia import InferenciaError
 from tests.conftest import OTRO_USUARIO_ID, USUARIO, agregar, detectado
 
@@ -10,6 +12,10 @@ def _lote(bd, estado="borrador", usuario_id=USUARIO.id, fotos=2, **extra) -> str
         agregar(bd, "fotos", lote_id=lote["id"], storage_path=ruta, created_at=f"2026-10-16T10:0{i}:00+00:00")
         bd.storage.objetos[ruta] = (f"imagen-{i}".encode(), {})
     return lote["id"]
+
+
+def _hace(minutos: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(minutes=minutos)).isoformat()
 
 
 def _estado(bd, lote_id) -> str:
@@ -169,6 +175,89 @@ def test_un_lote_con_error_se_puede_analizar_de_nuevo(cliente, bd, inferencia):
 
     assert respuesta.status_code == 202
     assert _estado(bd, lote_id) == "analizado"
+
+
+def test_un_lote_con_error_borra_los_frutos_viejos_al_reintentar(cliente, bd, inferencia):
+    lote_id = _lote(bd, estado="error", fotos=1)
+    agregar(bd, "frutos", lote_id=lote_id, foto_id="resto", fruta_id="mango")
+    inferencia.por_foto = [[detectado()]]
+
+    assert cliente.post(f"/lotes/{lote_id}/analizar").status_code == 202
+
+    assert [f["foto_id"] for f in bd.tablas["frutos"]] != ["resto"]
+    assert len(bd.tablas["frutos"]) == 1
+    assert _estado(bd, lote_id) == "analizado"
+
+
+def test_lote_analizando_vencido_se_puede_reclamar_y_borra_frutos_viejos(cliente, bd, inferencia):
+    lote_id = _lote(bd, estado="analizando", fotos=1, updated_at=_hace(11))
+    agregar(bd, "frutos", lote_id=lote_id, foto_id="resto", fruta_id="mango")
+    # Un fruto de otro lote no se toca.
+    otro = agregar(bd, "lotes", nombre="Otro", usuario_id=str(USUARIO.id))
+    agregar(bd, "frutos", lote_id=otro["id"], foto_id="f", fruta_id="mango")
+    inferencia.por_foto = [[detectado(), detectado()]]
+
+    respuesta = cliente.post(f"/lotes/{lote_id}/analizar")
+
+    assert respuesta.status_code == 202
+    assert sorted(f["lote_id"] for f in bd.tablas["frutos"]) == sorted([lote_id, lote_id, otro["id"]])
+    assert all(f["foto_id"] != "resto" for f in bd.tablas["frutos"])
+    assert _estado(bd, lote_id) == "analizado"
+
+
+def test_el_limite_de_vencido_sale_de_la_configuracion(cliente, bd, inferencia, monkeypatch):
+    monkeypatch.setenv("ANALISIS_VENCIDO_MINUTOS", "1")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        lote_id = _lote(bd, estado="analizando", fotos=1, updated_at=_hace(2))
+        inferencia.por_foto = [[detectado()]]
+
+        assert cliente.post(f"/lotes/{lote_id}/analizar").status_code == 202
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()
+
+
+def test_lote_analizando_reciente_responde_409_y_no_toca_nada(cliente, bd):
+    lote_id = _lote(bd, estado="analizando", updated_at=_hace(2))
+    agregar(bd, "frutos", lote_id=lote_id, foto_id="f", fruta_id="mango")
+
+    respuesta = cliente.post(f"/lotes/{lote_id}/analizar")
+
+    assert respuesta.status_code == 409
+    assert "se está analizando" in respuesta.json()["detail"]
+    assert len(bd.tablas["frutos"]) == 1
+
+
+def test_el_reclamo_es_atomico_si_otro_ya_tomo_el_lote_con_error(cliente, bd, inferencia, monkeypatch):
+    lote_id = _lote(bd, estado="error", fotos=1)
+    foto_vieja = next(l for l in bd.tablas["lotes"] if l["id"] == lote_id).copy()
+    # Otra petición ya lo tomó entre la lectura y el reclamo.
+    next(l for l in bd.tablas["lotes"] if l["id"] == lote_id)["estado"] = "analizando"
+    monkeypatch.setattr("app.routers.analisis.obtener_lote", lambda *_: foto_vieja)
+    inferencia.por_foto = [[detectado()]]
+
+    respuesta = cliente.post(f"/lotes/{lote_id}/analizar")
+
+    assert respuesta.status_code == 409
+    assert inferencia.imagenes == []
+    assert bd.tablas.get("frutos", []) == []
+
+
+def test_el_reclamo_es_atomico_si_otro_ya_tomo_el_lote_vencido(cliente, bd, inferencia, monkeypatch):
+    lote_id = _lote(bd, estado="analizando", fotos=1, updated_at=_hace(30))
+    foto_vieja = next(l for l in bd.tablas["lotes"] if l["id"] == lote_id).copy()
+    # Otra petición ya reclamó el lote vencido: el trigger renovó updated_at.
+    next(l for l in bd.tablas["lotes"] if l["id"] == lote_id)["updated_at"] = _hace(0)
+    monkeypatch.setattr("app.routers.analisis.obtener_lote", lambda *_: foto_vieja)
+    inferencia.por_foto = [[detectado()]]
+
+    respuesta = cliente.post(f"/lotes/{lote_id}/analizar")
+
+    assert respuesta.status_code == 409
+    assert inferencia.imagenes == []
 
 
 def test_lote_ajeno_o_inexistente_responde_404(cliente, bd):

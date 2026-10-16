@@ -133,6 +133,10 @@ class FakeQuery:
         self.filtros.append(lambda fila: str(fila.get(columna)) in permitidos)
         return self
 
+    def lt(self, columna: str, valor: Any) -> "FakeQuery":
+        self.filtros.append(lambda fila: str(fila.get(columna)) < str(valor))
+        return self
+
     def order(self, columna: str, desc: bool = False) -> "FakeQuery":
         self.orden = (columna, desc)
         return self
@@ -164,6 +168,8 @@ class FakeQuery:
         if self.operacion == "update":
             for fila in seleccion:
                 fila.update(self.datos)
+                if self.tabla == "lotes":  # trigger lotes_set_updated_at
+                    fila["updated_at"] = datetime.now(timezone.utc).isoformat()
         elif self.operacion == "delete":
             self.bd.tablas[self.tabla] = [f for f in filas if f not in seleccion]
 

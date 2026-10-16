@@ -20,6 +20,10 @@ def analizar_lote(admin: Client, inferencia: ClienteInferencia, lote_id: UUID) -
     """
     ids_guardados: list[str] = []
     try:
+        # Es seguro borrar: solo se llega aquí desde borrador, error o analizando vencido, y en ninguno hubo
+        # un análisis completo (un lote `analizado` nunca se reanaliza). Lo que haya son restos de una corrida cortada.
+        admin.table("frutos").delete().eq("lote_id", str(lote_id)).execute()
+
         fotos = (
             admin.table("fotos").select("id,storage_path").eq("lote_id", str(lote_id)).eq("valida", True)
             .order("created_at").execute().data
