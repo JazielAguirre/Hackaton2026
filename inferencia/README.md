@@ -27,19 +27,34 @@ docker compose down           # detenerlo
 | En el contenedor | Origen en el repo | Qué es |
 | --- | --- | --- |
 | `/app/models/detector_mango.pt` | `api/models/detector_mango.pt` | Detector YOLO nano con 3 clases (mango, jitomate, fresa). |
-| `/app/models/clasificador_<fruta>.pt` | `api/models/clasificador_<fruta>.pt` | Un clasificador por fruta. Hoy solo existe el de mango. |
+| `/app/models/clasificador_<fruta>.pt` | `api/models/clasificador_<fruta>.pt` | Un clasificador por fruta. Hoy existen mango, jitomate y fresa. |
 | `/app/mapeo_clases.json` | `ml/config/mapeo_clases.json` | Clase del modelo → código de `clases.codigo` en la BD. Mismo archivo que usa `ml/` para entrenar. |
 
 Los pesos son los `best.pt` que entrena `ml/` (ver el README de la raíz, sección *Entrenar los modelos*): el equipo los comparte en la carpeta `FruitScan/modelos/` de Google Drive. Cópialos a `api/models/` con esos nombres.
 
-Una fruta sin `clasificador_<fruta>.pt` (jitomate y fresa por ahora) se detecta, pero sus frutos salen sin clase y la base los manda a `revision_manual`.
+Una fruta sin `clasificador_<fruta>.pt` se detecta, pero sus frutos salen sin clase y la base los manda a `revision_manual`.
+
+## Qué fruta se clasifica
+
+El detector se entrenó solo con cajas de mango (`ml/scripts/preparar_detector.py`: todas son clase 0), así que nunca dice jitomate ni fresa. Por eso la API manda la fruta del lote (`lotes.fruta_principal`) en el campo opcional `fruta` de `/inferir`:
+
+- **Con `fruta`** (`mango`, `jitomate` o `fresa`): cada caja detectada se toma como esa fruta y se clasifica con `clasificador_<fruta>.pt`. Otro valor → 422. Si esa fruta no tiene clasificador, el fruto sale con `clase_modelo`, `clase_bd` y `conf_clasificacion` en `null`.
+- **Sin `fruta`** (lote sin fruta): se usa la fruta que dice el detector, como antes.
+
+Límites actuales: el detector solo ubica bien mangos, así que en fotos de jitomate o fresa las cajas pueden ser pobres hasta reentrenarlo con las 3 frutas. El clasificador de jitomate no aprendió `dano_fisico`: esa clase nunca saldrá (solo `pudricion_mancha` y `sano`).
+
+### Cambiar o agregar un clasificador
+
+1. Copia los pesos a `api/models/clasificador_<fruta>.pt` (el servicio los lee al arrancar).
+2. Agrega la fruta en `ml/config/mapeo_clases.json` con `modelo_a_bd`: clase del modelo → `clases.codigo` de la BD.
+3. Reconstruye: `docker compose up -d --build inferencia` (si solo cambias pesos, basta `docker compose restart inferencia`). Revisa que `GET /salud` liste la fruta.
 
 ## Rutas
 
 | Ruta | Respuesta |
 | --- | --- |
 | `GET /salud` | `version` (huella de los pesos), clases del detector y de cada clasificador. |
-| `POST /inferir` | Multipart con el campo `foto`. Devuelve `frutos` (fruta, caja normalizada 0–1 con esquina superior izquierda + ancho/alto, `conf_deteccion`, `clase_modelo`, `clase_bd`, `conf_clasificacion`) y `modelo_version`. |
+| `POST /inferir` | Multipart con el campo `foto` y el campo opcional `fruta` (ver *Qué fruta se clasifica*). Devuelve `frutos` (fruta, caja normalizada 0–1 con esquina superior izquierda + ancho/alto, `conf_deteccion`, `clase_modelo`, `clase_bd`, `conf_clasificacion`) y `modelo_version`. |
 
 `conf_clasificacion` es la probabilidad top-1 de la clase que predice el modelo, **antes** de agrupar `cancro_bacteriano` y `sarna` en `otro_defecto` (no se suman las clases agrupadas).
 

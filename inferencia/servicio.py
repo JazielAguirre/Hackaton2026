@@ -11,13 +11,15 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from PIL import Image, ImageOps
 from ultralytics import YOLO
 
 MODELOS_DIR = Path(os.environ.get("MODELOS_DIR", "models"))
 # Se monta desde ml/config/mapeo_clases.json (docker-compose.yml); no se copia a mano.
 MAPEO_CLASES = Path(os.environ.get("MAPEO_CLASES", "mapeo_clases.json"))
+
+FRUTAS = ("mango", "jitomate", "fresa")
 
 modelos: dict = {"clasificadores": {}}
 
@@ -38,8 +40,8 @@ async def lifespan(_: FastAPI):
     detector = MODELOS_DIR / "detector_mango.pt"
     modelos["detector"] = YOLO(detector, task="detect")
     pesos = [detector]
-    # Un clasificador por fruta. Las frutas sin pesos todavía (jitomate, fresa) se detectan,
-    # pero sus frutos salen sin clase y la base los manda a revisión manual.
+    # Un clasificador por fruta. Una fruta sin pesos se detecta, pero sus frutos salen sin clase
+    # y la base los manda a revisión manual.
     for fruta, datos in mapeo.items():
         if fruta.startswith("_"):
             continue
@@ -68,7 +70,11 @@ def salud() -> dict:
 
 
 @app.post("/inferir")
-def inferir(foto: UploadFile = File(...)) -> dict:
+def inferir(foto: UploadFile = File(...), fruta: str | None = Form(None)) -> dict:
+    """Con `fruta`, todas las cajas se toman como esa fruta (el detector solo aprendió mango).
+    Sin `fruta`, cada caja usa la fruta que dice el detector."""
+    if fruta is not None and fruta not in FRUTAS:
+        raise HTTPException(422, f"Fruta no soportada: usa {', '.join(FRUTAS)}")
     try:
         img = ImageOps.exif_transpose(Image.open(io.BytesIO(foto.file.read()))).convert("RGB")
     except Exception as error:
@@ -81,19 +87,19 @@ def inferir(foto: UploadFile = File(...)) -> dict:
     ancho, alto = img.size
     nombres = modelos["detector"].names
     cajas = deteccion.boxes.xyxyn.tolist()
-    frutas = [nombres[int(c)] for c in deteccion.boxes.cls.tolist()]
+    frutas = [fruta or nombres[int(c)] for c in deteccion.boxes.cls.tolist()]
     recortes = [img.crop((int(x1 * ancho), int(y1 * alto), int(x2 * ancho), int(y2 * alto))) for x1, y1, x2, y2 in cajas]
 
     frutos = []
-    for (x1, y1, x2, y2), fruta, conf, recorte in zip(cajas, frutas, deteccion.boxes.conf.tolist(), recortes):
+    for (x1, y1, x2, y2), fruta_caja, conf, recorte in zip(cajas, frutas, deteccion.boxes.conf.tolist(), recortes):
         fruto = {
-            "fruta": fruta,
+            "fruta": fruta_caja,
             "caja_x": round(x1, 4), "caja_y": round(y1, 4),
             "caja_ancho": round(x2 - x1, 4), "caja_alto": round(y2 - y1, 4),
             "conf_deteccion": round(conf, 3),
             "clase_modelo": None, "clase_bd": None, "conf_clasificacion": None,
         }
-        clasificador = modelos["clasificadores"].get(fruta)
+        clasificador = modelos["clasificadores"].get(fruta_caja)
         if clasificador is not None:
             resultado = clasificador["modelo"].predict(recorte, imgsz=224, device="cpu", verbose=False)[0]
             clase = clasificador["modelo"].names[resultado.probs.top1]

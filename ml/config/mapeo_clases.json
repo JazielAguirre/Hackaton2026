@@ -16,5 +16,19 @@
       "cancro_bacteriano": "otro_defecto",
       "sarna": "otro_defecto"
     }
+  },
+  "jitomate": {
+    "modelo_a_bd": {
+      "pudricion_mancha": "pudricion_mancha",
+      "sano": "sano"
+    }
+  },
+  "fresa": {
+    "modelo_a_bd": {
+      "antracnosis": "antracnosis",
+      "moho_gris": "moho_gris",
+      "oidio_fruto": "oidio_fruto",
+      "sana": "sana"
+    }
   }
 }
