@@ -95,13 +95,10 @@
   text-align: center;
 }
 
-/* ---------- Barra de filtros fija ---------- */
+/* ---------- Barra de filtros ---------- */
 
 .reportes-page__filtros {
-  position: sticky;
-  top: var(--header-height);
-  z-index: 10;
-  /* ocupa todo el ancho del contenido y un poco más, para que la lista pase por debajo */
+  /* ocupa todo el ancho del contenido y un poco más */
   margin-inline: calc(var(--space-4) * -1);
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
@@ -638,9 +635,9 @@
 }
 
 .tabla-lotes thead th {
-  /* Encabezado fijo justo debajo de la barra de filtros */
+  /* Encabezado fijo justo debajo del encabezado de la app */
   position: sticky;
-  top: calc(var(--header-height) + var(--filtros-alto, 0px));
+  top: var(--header-height);
   z-index: 1;
   padding: 0 var(--space-2);
   /* mismo tono que la tabla, pero sólido para tapar las filas que pasan por debajo */
