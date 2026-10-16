@@ -41,6 +41,7 @@
   --color-surface-edge: rgba(255, 255, 255, 0.6);
   --color-fill: var(--color-gray-100);
   --color-fill-thumb: #ffffff;
+  --color-surface-solid: #ffffff; /* superficie sin transparencia (encabezados fijos, "reducir transparencia") */
   --color-elevated: #ffffff; /* menús y superficies sobre todo lo demás */
   --color-input: rgba(255, 255, 255, 0.9);
   --color-border: var(--color-gray-200);
@@ -77,6 +78,21 @@
   --destino-separar: #a51a1a;
   --destino-revision-manual: #94a3b8;
 
+  /* Grado del lote: un tono propio por grado, sólido y con texto blanco (contraste AA ≥ 4.5:1).
+     Siempre va con la letra o el nombre del grado; el color solo ayuda a ubicarlo rápido. */
+  --grado-a: #15803d; /* verde · 5.0:1 */
+  --grado-b: #1d4ed8; /* azul · 6.7:1 */
+  --grado-c: #b45309; /* ámbar · 5.0:1 */
+  --grado-rechazo: #b91c1c; /* rojo · 6.5:1 */
+
+  /* Fruta: color sólido de cada cultivo y el texto que va encima */
+  --fruta-mango: #f5b21b;
+  --fruta-mango-texto: #3b2300; /* oscuro: el amarillo no da contraste con blanco */
+  --fruta-jitomate: #dc2626;
+  --fruta-jitomate-texto: #ffffff;
+  --fruta-fresa: #be185d;
+  --fruta-fresa-texto: #ffffff;
+
   --header-height: 3.5rem;
 
   color-scheme: light;
@@ -94,12 +110,15 @@
   --color-bg: var(--color-gray-900);
   --color-text: var(--color-gray-50);
   --color-text-secondary: var(--color-gray-400);
-  --color-surface: rgba(15, 23, 42, 0.72);
-  --color-surface-edge: rgba(255, 255, 255, 0.08);
+  /* Capas de claro a más claro: fondo → tarjetas → menús.
+     Cada contenedor se separa del fondo por su tono, no por una línea dura. */
+  --color-surface: rgba(30, 41, 59, 0.78); /* slate-800 translúcido */
+  --color-surface-solid: #1e293b;
+  --color-surface-edge: rgba(255, 255, 255, 0.09); /* borde de luz */
   --color-fill: rgba(148, 163, 184, 0.16);
-  --color-fill-thumb: var(--color-gray-700);
-  --color-elevated: var(--color-gray-900);
-  --color-input: rgba(51, 65, 85, 0.6);
+  --color-fill-thumb: #475569; /* debe resaltar sobre la tarjeta, ya no sobre el fondo */
+  --color-elevated: #273449; /* menús: un escalón arriba de las tarjetas */
+  --color-input: rgba(71, 85, 105, 0.42);
   --color-border: rgba(148, 163, 184, 0.24);
   --color-brand: var(--color-primary-500);
   --color-brand-pressed: var(--color-primary-600);
@@ -108,6 +127,7 @@
   /* el rojo puro no alcanza contraste sobre fondo oscuro */
   --color-error-text: color-mix(in srgb, var(--color-error) 65%, white);
   --shadow-card: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+  --shadow-thumb: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -4px rgba(0, 0, 0, 0.45);
 }
 
 /* Cambio de tema con fundido suave en vez de un salto brusco de brillo */
@@ -162,6 +182,10 @@ input {
   transition: border-color var(--duration-press) ease-out, box-shadow var(--duration-press) ease-out;
 }
 
+.field__control:hover:not(:focus-within) {
+  border-color: color-mix(in srgb, var(--color-text-secondary) 55%, transparent);
+}
+
 .field__control:focus-within {
   border-color: var(--color-brand);
   box-shadow: 0 0 0 4px var(--color-focus);
@@ -197,6 +221,146 @@ input {
 
 .field__message--error {
   color: var(--color-error-text);
+}
+
+/* Lista desplegable con la misma apariencia que el campo de texto */
+.field__control--select {
+  position: relative;
+}
+
+.field__control--select .field__input {
+  appearance: none;
+  padding-inline-end: 2.25rem;
+  cursor: pointer;
+}
+
+.field__control--select::after {
+  content: '';
+  position: absolute;
+  right: var(--space-4);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid var(--color-text-secondary);
+  border-bottom: 2px solid var(--color-text-secondary);
+  transform: translateY(-25%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* Opciones de la lista. Sin esto, en modo oscuro algunos navegadores (Chrome en Windows)
+   pintan la lista con fondo claro y el texto claro del tema: no se lee. */
+.field__input option,
+.field__input optgroup {
+  background-color: var(--color-surface-solid);
+  color: var(--color-text);
+}
+
+.field__control--select::after {
+  transition: transform var(--duration-move) var(--ease-out);
+}
+
+/* Ícono del calendario en los campos de fecha: tamaño táctil y respuesta al pasar */
+.field__input::-webkit-calendar-picker-indicator {
+  padding: var(--space-1);
+  border-radius: 0.375rem;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity var(--duration-press) ease-out, background-color var(--duration-press) ease-out;
+}
+
+.field__input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: var(--color-fill);
+}
+
+/* Navegadores con select personalizable (Chrome 135+): la lista se dibuja con los
+   tokens del tema, nace del campo y sigue el modo claro/oscuro. El resto usa la lista nativa. */
+@supports (appearance: base-select) {
+  .field__control--select .field__input,
+  .field__control--select .field__input::picker(select) {
+    appearance: base-select;
+  }
+
+  .field__control--select .field__input::picker-icon {
+    display: none; /* ya hay una flecha propia */
+  }
+
+  .field__control--select .field__input::picker(select) {
+    /* Siempre abajo del campo: el navegador no la voltea hacia arriba aunque falte espacio.
+       Si no cabe, la lista se acorta al espacio libre y se desplaza por dentro. */
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: none;
+    max-block-size: min(20rem, 100%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-block: var(--space-1);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-elevated);
+    color: var(--color-text);
+    box-shadow: var(--shadow-card);
+    transform-origin: top center;
+    opacity: 0;
+    transform: scale(0.96);
+    transition:
+      opacity 150ms ease-out,
+      transform var(--duration-move) var(--ease-out),
+      overlay 150ms allow-discrete,
+      display 150ms allow-discrete;
+  }
+
+  .field__control--select .field__input:open::picker(select) {
+    opacity: 1;
+    transform: none;
+  }
+
+  @starting-style {
+    .field__control--select .field__input:open::picker(select) {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  .field__control--select:has(.field__input:open)::after {
+    transform: translateY(25%) rotate(225deg);
+  }
+
+  .field__control--select option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 2.75rem;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-size: 0.9375rem;
+    cursor: pointer;
+  }
+
+  .field__control--select option:hover,
+  .field__control--select option:focus-visible {
+    outline: none;
+    background: var(--color-fill);
+  }
+
+  .field__control--select option:checked {
+    font-weight: 600;
+    color: var(--color-brand);
+  }
+
+  .field__control--select option::checkmark {
+    color: var(--color-brand);
+  }
+}
+
+/* Oculto a la vista pero disponible para lectores de pantalla y teclado */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ---------- Botón ---------- */
@@ -254,6 +418,19 @@ input {
   font-size: 0.875rem;
 }
 
+.button--secundario {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-fill);
+  color: var(--color-text);
+  font-size: 0.9375rem;
+}
+
+.button--secundario:active:not(:disabled),
+.button--secundario[aria-expanded='true'] {
+  background: var(--color-border);
+}
+
 .button__spinner {
   width: 1rem;
   height: 1rem;
@@ -295,6 +472,10 @@ input {
 
 .segmented__option {
   position: relative; /* encima del thumb */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
   min-height: 2.25rem;
   padding: var(--space-1) var(--space-3);
   border: 0;
@@ -311,6 +492,16 @@ input {
   font-weight: 600;
 }
 
+/* El ícono de la opción activa toma el color de la marca */
+.segmented__option svg {
+  color: var(--color-text-secondary);
+  transition: color var(--duration-move) var(--ease-out);
+}
+
+.segmented__option[aria-pressed='true'] svg {
+  color: var(--color-brand);
+}
+
 .segmented__option:active {
   opacity: 0.6;
 }
@@ -318,6 +509,46 @@ input {
 .segmented__option:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--color-focus);
+}
+
+/* ---------- Chip (filtro que se activa y desactiva) ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-input);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--duration-press) ease-out, background-color var(--duration-press) ease-out;
+}
+
+.chip:hover {
+  background: var(--color-fill);
+}
+
+.chip:active {
+  transform: scale(0.96);
+}
+
+.chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus);
+}
+
+.chip[aria-pressed='true'],
+.chip[aria-expanded='true'] {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
 }
 
 /* ---------- Interruptor de tema ---------- */
@@ -453,9 +684,14 @@ input {
   }
 
   .button:active:not(:disabled),
+  .chip:active,
   .theme-toggle:active,
   .icon-button:active {
     transform: none;
+  }
+
+  .field__control--select::after {
+    transition: none;
   }
 
   .button__spinner {
@@ -468,7 +704,7 @@ input {
 @media (prefers-reduced-transparency: reduce) {
   .theme-toggle,
   .card {
-    background: var(--color-bg);
+    background: var(--color-surface-solid);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
