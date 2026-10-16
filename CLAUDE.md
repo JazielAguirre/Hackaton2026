@@ -68,6 +68,7 @@ Configuración inicial: `umbral_confianza` 0.60, `min_frutos_muestra` 30, `alert
 - `AI_LOG.md`: después de cada tarea agrega una fila con fecha y hora, qué se pidió, qué generaste y qué archivos tocaste. Deja vacía la columna "Qué cambió el equipo" para que la llene una persona.
 - Commits pequeños y frecuentes, con mensajes en español en imperativo (ej. "Agrega trigger de destino"). No hagas push si no te lo piden.
 - Ramas: `main` ← PR desde `Wilver` (solo con lo ya probado). Cada issue va en una rama `feature/<nn>-<descripcion>` creada desde `Wilver`, con PR hacia `Wilver`. Antes de crear una rama feature, actualiza `Wilver`.
+- Git: antes de cualquier push, haz git fetch y revisa si la rama está atrás de origin. Integra con merge, nunca con push --force, reset --hard ni rebase de ramas publicadas; si hay conflictos, muéstralos antes de resolverlos.
 
 ## Seguridad
 - Nunca escribas llaves en el código ni las subas al repo. Variables: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en frontend; `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en api. Mantén `.env.example` al día y `.env` en `.gitignore`.
