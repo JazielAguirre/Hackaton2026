@@ -1,0 +1,314 @@
+/* ==========================================================================
+   FruitScan · componentes globales: encabezado, menú de navegación y contenido
+   ========================================================================== */
+
+/* Fondo suave fijo con la paleta; da algo que difuminar a los materiales translúcidos */
+.app-main::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(45% 40% at 0% 0%, color-mix(in srgb, var(--color-primary-300) 25%, transparent), transparent 70%),
+    radial-gradient(40% 35% at 100% 100%, color-mix(in srgb, var(--color-accent-500) 14%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.app-main {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) max(var(--space-8), env(safe-area-inset-bottom));
+}
+
+/* ---------- Encabezado ---------- */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--header-height);
+  padding: env(safe-area-inset-top) max(var(--space-4), env(safe-area-inset-right)) 0
+    max(var(--space-4), env(safe-area-inset-left));
+  /* Material translúcido: el contenido pasa por debajo */
+  background: var(--color-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 10px 24px -20px rgba(15, 23, 42, 0.35);
+}
+
+.app-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.app-header__logo {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.5625rem;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.app-header__actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.app-header__actions .theme-toggle {
+  box-shadow: none;
+  background: var(--color-fill);
+  border-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.app-header__menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-fill);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--duration-press) ease-out;
+}
+
+.app-header__menu-button:active {
+  transform: scale(0.96);
+}
+
+.app-header__menu-button[aria-expanded='true'] {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.app-header__menu-button:focus-visible,
+.app-header__brand:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--color-focus);
+  border-radius: 999px;
+}
+
+/* ---------- Menú desplegable ---------- */
+
+.nav-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(18rem, calc(100vw - 2rem));
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  /* Sólido: el encabezado ya usa backdrop-filter y el navegador no
+     permite otro desenfoque anidado, así que el contenido se transparentaba */
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 1.125rem;
+  box-shadow: var(--shadow-card);
+  /* Nace del botón que lo abre (esquina superior derecha) */
+  transform-origin: top right;
+  opacity: 0;
+  transform: scale(0.94);
+  visibility: hidden;
+  transition:
+    opacity 200ms var(--ease-out),
+    transform var(--duration-move) var(--ease-out),
+    visibility 0s linear var(--duration-move);
+}
+
+.nav-menu[data-open] {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.nav-menu__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+}
+
+.nav-menu__avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-primary-100);
+  color: var(--color-primary-900);
+  font-weight: 700;
+}
+
+.nav-menu__name {
+  display: block;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.nav-menu__role {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.nav-menu__list {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0;
+  padding: var(--space-2) 0;
+  list-style: none;
+  border-block: 1px solid var(--color-border);
+}
+
+.nav-menu__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-press) ease-out;
+}
+
+.nav-menu__item svg {
+  color: var(--color-text-secondary);
+}
+
+.nav-menu__item:hover,
+.nav-menu__item:focus-visible {
+  outline: none;
+  background: var(--color-fill);
+}
+
+.nav-menu__item:active {
+  background: var(--color-gray-200);
+}
+
+.nav-menu__item[aria-current='page'] {
+  background: var(--color-primary-50);
+  color: var(--color-primary-900);
+  font-weight: 700;
+}
+
+.nav-menu__item[aria-current='page'] svg {
+  color: var(--color-primary-700);
+}
+
+:root[data-theme='dark'] .nav-menu__item[aria-current='page'] {
+  background: color-mix(in srgb, var(--color-primary-500) 20%, transparent);
+  color: var(--color-primary-100);
+}
+
+:root[data-theme='dark'] .nav-menu__item[aria-current='page'] svg {
+  color: var(--color-primary-300);
+}
+
+:root[data-theme='dark'] .nav-menu__item:active {
+  background: var(--color-gray-700);
+}
+
+.nav-menu__item--logout,
+.nav-menu__item--logout svg {
+  color: var(--color-error-text);
+}
+
+/* ---------- Pantalla provisional ---------- */
+
+.placeholder {
+  min-height: 60dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.placeholder__icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--space-2);
+  border-radius: 1rem;
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+:root[data-theme='dark'] .placeholder__icon {
+  background: color-mix(in srgb, var(--color-primary-500) 20%, transparent);
+  color: var(--color-primary-300);
+}
+
+.placeholder__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.placeholder__text {
+  color: var(--color-text-secondary);
+}
+
+/* "Menú" solo como ícono en pantallas muy angostas */
+@media (max-width: 22rem) {
+  .app-header__menu-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .app-header__menu-button {
+    padding: 0 var(--space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .app-header {
+    background: var(--color-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

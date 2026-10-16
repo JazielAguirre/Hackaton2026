@@ -1,5 +1,8 @@
 ml/data/
 AI_LOG.md
+.env
+*.env
+!.env.example
 
 # Entrenamiento
 *.pt
@@ -8,3 +11,4 @@ runs/
 # Python
 .venv/
 __pycache__/
+.pytest_cache/
