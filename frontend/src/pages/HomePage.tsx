@@ -25,9 +25,9 @@ export function HomePage({ nombre, lotes, alertas, esEjemplo = false, onNuevoAna
   const sumar = (campo: 'total_frutos' | 'frutos_sanos' | 'frutos_revision') =>
     analizados.reduce((suma, lote) => suma + (lote[campo] ?? 0), 0)
 
-  const totalFrutos = sumar('total_frutos')
-  // Igual que en la BD: el porcentaje se calcula sin contar revision_manual
-  const clasificados = totalFrutos - sumar('frutos_revision')
+  // En la BD, total_frutos ya cuenta solo los clasificados; la revisión manual va aparte.
+  const clasificados = sumar('total_frutos')
+  const detectados = clasificados + sumar('frutos_revision')
   const pctSanos = clasificados ? Math.round((sumar('frutos_sanos') / clasificados) * 100) : 0
 
   const porGrado = Object.fromEntries(GRADOS.map((grado) => [grado, 0])) as Record<Grado, number>
@@ -57,7 +57,7 @@ export function HomePage({ nombre, lotes, alertas, esEjemplo = false, onNuevoAna
       <section id="resumen" className="home__section" aria-label="Indicadores">
         <div className="stats">
           <StatTile label="Lotes analizados" value={formatNumero(analizados.length)} detail={enProceso ? `${enProceso} en análisis` : undefined} />
-          <StatTile label="Frutos revisados" value={formatNumero(totalFrutos)} />
+          <StatTile label="Frutos revisados" value={formatNumero(detectados)} />
           <StatTile label="Frutos sanos" value={`${pctSanos}%`} detail="Sin contar revisión manual" />
           <StatTile label="Lotes en rechazo" value={formatNumero(porGrado.rechazo)} />
         </div>
@@ -75,7 +75,7 @@ export function HomePage({ nombre, lotes, alertas, esEjemplo = false, onNuevoAna
         <article className="card">
           <header className="card__header">
             <h2 className="card__title">Destino de los frutos</h2>
-            <p className="card__subtitle">{formatNumero(totalFrutos)} frutos en lotes analizados</p>
+            <p className="card__subtitle">{formatNumero(detectados)} frutos en lotes analizados</p>
           </header>
           <DestinoChart conteo={porDestino} />
         </article>
