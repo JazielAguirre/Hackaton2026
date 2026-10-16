@@ -156,3 +156,48 @@ def test_detalle_de_lote_ajeno_o_inexistente_responde_404(cliente, bd):
         respuesta = cliente.get(f"/lotes/{lote_id}")
         assert respuesta.status_code == 404
         assert respuesta.json()["detail"] == "Lote no encontrado"
+
+
+def _parcela(bd, nombre="Parcela 3", zona_id=None, activa=True, usuario_id=USUARIO.id) -> str:
+    return agregar(bd, "parcelas", nombre=nombre, zona_id=zona_id, activa=activa, usuario_id=str(usuario_id))["id"]
+
+
+def test_crea_lote_con_parcela_registrada(cliente, bd):
+    parcela_id = _parcela(bd)
+
+    respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"parcela_id": parcela_id})
+
+    assert respuesta.status_code == 201
+    lote = respuesta.json()
+    assert lote["parcela_id"] == parcela_id
+    # El nombre libre se completa con el de la parcela y la zona sale del perfil (la parcela no tiene).
+    assert lote["parcela"] == "Parcela 3"
+    assert lote["zona_id"] == 1
+
+
+def test_el_lote_usa_la_zona_de_su_parcela(cliente, bd):
+    bd.tablas["zonas"].append({"id": 3, "nombre": "Costa", "activa": True})
+    parcela_id = _parcela(bd, zona_id=3)
+
+    respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"parcela_id": parcela_id})
+
+    assert respuesta.json()["zona_id"] == 3
+
+
+def test_respeta_el_nombre_de_parcela_que_manda_el_cliente(cliente, bd):
+    parcela_id = _parcela(bd)
+
+    respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"parcela_id": parcela_id, "parcela": "Otro nombre"})
+
+    assert respuesta.json()["parcela"] == "Otro nombre"
+
+
+def test_parcela_ajena_inactiva_o_inexistente_responde_422(cliente, bd):
+    ajena = _parcela(bd, nombre="Ajena", usuario_id=OTRO_USUARIO_ID)
+    inactiva = _parcela(bd, nombre="Vieja", activa=False)
+
+    for parcela_id in (ajena, inactiva, "33333333-3333-3333-3333-333333333333"):
+        respuesta = cliente.post("/lotes", json=LOTE_MINIMO | {"parcela_id": parcela_id})
+        assert respuesta.status_code == 422
+        assert "parcela" in respuesta.json()["detail"]
+    assert bd.tablas.get("lotes", []) == []
