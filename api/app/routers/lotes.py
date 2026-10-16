@@ -6,7 +6,7 @@ from supabase import Client
 
 from app.deps import ClienteUsuario, UsuarioActual
 from app.schemas.lote import Lote, LoteCrear, LoteDetalle
-from app.services.lotes import obtener_lote
+from app.services.lotes import frutos_con_clase, nombre_zona, obtener_lote, ultimo_analisis
 from app.services.storage import BUCKET
 
 router = APIRouter(prefix="/lotes", tags=["lotes"])
@@ -20,15 +20,33 @@ def crear_lote(datos: LoteCrear, usuario: UsuarioActual, bd: ClienteUsuario) -> 
     if datos.fruta_principal is not None and not _existe_activa(bd, "frutas", datos.fruta_principal):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, FRUTA_NO_SOPORTADA)
 
+    parcela = None
+    if datos.parcela_id is not None:
+        parcela = _parcela_activa(bd, datos.parcela_id)
+
     zona_id = datos.zona_id
     if zona_id is None:
-        zona_id = _zona_del_perfil(bd, usuario.id)
+        # Si la parcela tiene zona, el lote debe usar esa (la base rechaza otra).
+        zona_id = parcela["zona_id"] if parcela and parcela["zona_id"] else _zona_del_perfil(bd, usuario.id)
     elif not _existe_activa(bd, "zonas", zona_id):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "La zona no existe o no está activa")
 
     # usuario_id y estado los pone la base de datos (default auth.uid() y 'borrador').
     fila = datos.model_dump(mode="json") | {"zona_id": zona_id}
+    if parcela and datos.parcela is None:
+        fila["parcela"] = parcela["nombre"]
     return bd.table("lotes").insert(fila).execute().data[0]
+
+
+def _parcela_activa(bd: Client, parcela_id: UUID) -> dict[str, Any]:
+    # RLS solo deja ver las parcelas del usuario: una ajena se ve igual que una que no existe.
+    filas = (
+        bd.table("parcelas").select("id,nombre,zona_id").eq("id", str(parcela_id)).eq("activa", True)
+        .limit(1).execute().data
+    )
+    if not filas:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "La parcela no existe o no está activa")
+    return filas[0]
 
 
 def _existe_activa(bd: Client, tabla: str, id_: str | int) -> bool:
@@ -47,8 +65,7 @@ def detalle_lote(lote_id: UUID, bd: ClienteUsuario) -> dict[str, Any]:
     sugerencias. Mientras no hay análisis, `analisis` es null y las listas van vacías."""
     lote = obtener_lote(bd, lote_id)
     fotos = bd.table("fotos").select("*").eq("lote_id", str(lote_id)).order("created_at").execute().data
-    frutos = bd.table("frutos").select("*").eq("lote_id", str(lote_id)).order("created_at").execute().data
-    analisis = _ultimo_analisis(bd, lote_id)
+    analisis = ultimo_analisis(bd, lote_id)
     sugerencias = []
     if analisis is not None:
         sugerencias = (
@@ -56,27 +73,12 @@ def detalle_lote(lote_id: UUID, bd: ClienteUsuario) -> dict[str, Any]:
         )
 
     return lote | {
-        "zona_nombre": _nombre_zona(bd, lote["zona_id"]),
+        "zona_nombre": nombre_zona(bd, lote["zona_id"]),
         "fotos": _con_urls_firmadas(bd, fotos),
         "analisis": analisis,
-        "frutos": _con_clase(bd, frutos),
+        "frutos": frutos_con_clase(bd, lote_id),
         "sugerencias": sugerencias,
     }
-
-
-def _ultimo_analisis(bd: Client, lote_id: UUID) -> dict[str, Any] | None:
-    filas = (
-        bd.table("analisis_lote").select("*").eq("lote_id", str(lote_id))
-        .order("created_at", desc=True).limit(1).execute().data
-    )
-    return filas[0] if filas else None
-
-
-def _nombre_zona(bd: Client, zona_id: int | None) -> str | None:
-    if zona_id is None:
-        return None
-    filas = bd.table("zonas").select("nombre").eq("id", zona_id).limit(1).execute().data
-    return filas[0]["nombre"] if filas else None
 
 
 def _con_urls_firmadas(bd: Client, fotos: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -88,13 +90,3 @@ def _con_urls_firmadas(bd: Client, fotos: list[dict[str, Any]]) -> list[dict[str
     )
     url_por_ruta = {f["path"]: f["signedURL"] for f in firmadas if not f.get("error")}
     return [f | {"url": url_por_ruta.get(f["storage_path"]), "url_marcada": None} for f in fotos]
-
-
-def _con_clase(bd: Client, frutos: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if not frutos:
-        return []
-    clases = {
-        c["id"]: {"codigo": c["codigo"], "nombre": c["nombre"]}
-        for c in bd.table("clases").select("id,codigo,nombre").execute().data
-    }
-    return [f | {"clase": clases.get(f["clase_id"])} for f in frutos]
