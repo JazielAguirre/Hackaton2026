@@ -323,6 +323,7 @@ export const lotesReporteEjemplo: LoteReporte[] = DETALLES.map((d) => {
     nombre: d.nombre,
     fruta_principal: d.fruta_principal,
     parcela: d.parcela,
+    parcela_id: d.parcela_id,
     zona_id: d.zona_id,
     zona_nombre: d.zona_nombre,
     latitud: d.latitud,

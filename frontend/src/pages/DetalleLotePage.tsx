@@ -27,7 +27,7 @@ import {
   type FrutoDetalle,
   type LoteDetalle,
 } from '../utils/dominio'
-import { nombreCultivo } from '../utils/reportes'
+import { nombreCultivo, nombreParcela } from '../utils/reportes'
 import '../styles/home.css'
 import '../styles/detalle-lote.css'
 
@@ -78,7 +78,7 @@ function Detalle({
 }) {
   const { analisis, fotos, frutos } = lote
   const cultivo = nombreCultivo(lote.fruta_principal)
-  const lugar = lote.parcela ?? lote.zona_nombre ?? 'Sin parcela'
+  const lugar = nombreParcela(lote)
 
   const [fotoActiva, setFotoActiva] = useState(0)
   const [seleccionado, setSeleccionado] = useState<string | null>(null)
@@ -162,8 +162,7 @@ function Detalle({
   const datos: [string, ReactNode][] = [
     ['Nombre', lote.nombre],
     ['Cultivo', cultivo],
-    ['Parcela', lote.parcela ?? '—'],
-    ['Zona', lote.zona_nombre ?? '—'],
+    ['Parcela', lugar],
     ['Fecha de cosecha', formatFechaLarga(lote.fecha_cosecha)],
     ['Destino que buscas', lote.destino_buscado ? NOMBRE_DESTINO[lote.destino_buscado] : '—'],
     ['Estado', NOMBRE_ESTADO[lote.estado]],
@@ -191,7 +190,6 @@ function Detalle({
           </h1>
           <p className="detalle__meta">
             {lote.nombre} · <span className="detalle__id">#{lote.id.slice(0, 8)}</span> · Cosecha {formatFechaLarga(lote.fecha_cosecha)}
-            {lote.zona_nombre && ` · ${lote.zona_nombre}`}
           </p>
         </div>
         {analisis && (

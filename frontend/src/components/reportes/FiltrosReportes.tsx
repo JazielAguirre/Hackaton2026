@@ -1,12 +1,13 @@
 import { useId, useState } from 'react'
 import { GRADOS, NOMBRE_GRADO, type Grado } from '../../utils/dominio'
-import { contarFiltros, nombreCultivo, type Filtros, type VistaLista } from '../../utils/reportes'
+import { contarFiltros, nombreCultivo, SIN_PARCELA, type Filtros, type VistaLista } from '../../utils/reportes'
 import { Icon, type IconName } from '../ui/Icon'
 import { SegmentedControl } from '../ui/SegmentedControl'
 
 type Opciones = {
   cultivos: string[]
-  zonas: { id: string; nombre: string }[]
+  parcelas: { id: string; nombre: string }[]
+  haySinParcela: boolean
   grados: Grado[]
 }
 
@@ -32,13 +33,13 @@ function alternar<T>(lista: readonly T[], valor: T): T[] {
   return lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor]
 }
 
-/** Barra fija con búsqueda, filtros y el cambio de vista. En celular, zona/fechas/grado van en un panel plegable. */
+/** Barra fija con búsqueda, filtros y el cambio de vista. En celular, parcela/fechas/grado van en un panel plegable. */
 export function FiltrosReportes({ filtros, opciones, vista, total, onChange, onLimpiar, onVista }: FiltrosReportesProps) {
   const [panelAbierto, setPanelAbierto] = useState(false)
   const panelId = useId()
   const activos = contarFiltros(filtros)
   // Los que viven dentro del panel en celular (para el "Filtros (n)")
-  const enPanel = (filtros.zona ? 1 : 0) + (filtros.desde ? 1 : 0) + (filtros.hasta ? 1 : 0) + filtros.grados.length
+  const enPanel = (filtros.parcela ? 1 : 0) + (filtros.desde ? 1 : 0) + (filtros.hasta ? 1 : 0) + filtros.grados.length
   const set = (cambio: Partial<Filtros>) => onChange({ ...filtros, ...cambio })
 
   return (
@@ -93,17 +94,18 @@ export function FiltrosReportes({ filtros, opciones, vista, total, onChange, onL
       )}
 
       <div id={panelId} className="filtros__panel" data-open={panelAbierto || undefined}>
-        {opciones.zonas.length > 0 && (
+        {(opciones.parcelas.length > 0 || opciones.haySinParcela) && (
           <label className="filtros__campo">
-            <span className="filtros__etiqueta">Zona</span>
+            <span className="filtros__etiqueta">Parcela</span>
             <span className="field__control field__control--select">
-              <select className="field__input" value={filtros.zona} onChange={(event) => set({ zona: event.target.value })}>
-                <option value="">Todas las zonas</option>
-                {opciones.zonas.map((zona) => (
-                  <option key={zona.id} value={zona.id}>
-                    {zona.nombre}
+              <select className="field__input" value={filtros.parcela} onChange={(event) => set({ parcela: event.target.value })}>
+                <option value="">Todas las parcelas</option>
+                {opciones.parcelas.map((parcela) => (
+                  <option key={parcela.id} value={parcela.id}>
+                    {parcela.nombre}
                   </option>
                 ))}
+                {opciones.haySinParcela && <option value={SIN_PARCELA}>Sin parcela</option>}
               </select>
             </span>
           </label>

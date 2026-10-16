@@ -1,5 +1,5 @@
 import { formatFechaLarga, formatNumero, formatPct, type LoteReporte } from '../../utils/dominio'
-import { nombreCultivo, type Columna, type Direccion, type Grupo } from '../../utils/reportes'
+import { nombreCultivo, nombreParcela, type Columna, type Direccion, type Grupo } from '../../utils/reportes'
 import { Icon } from '../ui/Icon'
 import { EnlaceLote } from './EnlaceLote'
 import { GradoInsignia } from './GradoInsignia'
@@ -16,7 +16,7 @@ const COLUMNAS: readonly { id: Columna; titulo: string; numerica?: boolean }[] =
   { id: 'lote', titulo: 'Lote' },
   { id: 'cosecha', titulo: 'Fecha de cosecha' },
   { id: 'cultivo', titulo: 'Cultivo' },
-  { id: 'parcela', titulo: 'Parcela o zona' },
+  { id: 'parcela', titulo: 'Parcela' },
   { id: 'frutos', titulo: 'Frutos', numerica: true },
   { id: 'sanos', titulo: '% sanos', numerica: true },
   { id: 'separar', titulo: '% para separar', numerica: true },
@@ -71,10 +71,7 @@ export function TablaLotes({ grupos, orden, dir, onOrdenar, onDescargarPdf }: Ta
                   </td>
                   <td>{formatFechaLarga(lote.fecha_cosecha)}</td>
                   <td>{nombreCultivo(lote.fruta_principal)}</td>
-                  <td>
-                    {lote.parcela ?? '—'}
-                    <span className="tabla-lotes__sub">{lote.zona_nombre}</span>
-                  </td>
+                  <td>{nombreParcela(lote)}</td>
                   <td className="tabla-lotes__num">{analizado ? formatNumero(lote.total_frutos ?? 0) : '—'}</td>
                   <td className="tabla-lotes__num">
                     {analizado ? (
